@@ -6,6 +6,7 @@ import {
   ManyToOne,
   JoinColumn,
 } from 'typeorm';
+import { Role } from '../../roles/entities/role.entity';
 
 @Entity('users')
 export class User {
@@ -43,6 +44,11 @@ export class User {
 
   @Column({ name: 'created_by', type: 'int', nullable: true })
   createdBy: number;
+
+  // Relación: Muchos usuarios pertenecen a un rol
+  @ManyToOne(() => Role, (role) => role.users, { nullable: true })
+  @JoinColumn({ name: 'role_id' })
+  role: Role;
 
   // Relación auto-referencial para created_by
   @ManyToOne(() => User, { nullable: true })

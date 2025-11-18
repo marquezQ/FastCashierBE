@@ -42,6 +42,7 @@ export class UsersService {
   async findAll(): Promise<User[]> {
     return await this.userRepository.find({
       where: { isActive: true },
+      relations: ['role'],
       order: { createdAt: 'DESC' },
     });
   }
@@ -49,6 +50,7 @@ export class UsersService {
   async findOne(id: number): Promise<User> {
     const user = await this.userRepository.findOne({
       where: { idUser: id },
+      relations: ['role'],
     });
 
     if (!user) {
