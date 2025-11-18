@@ -9,17 +9,17 @@ import { User } from '../../users/entities/user.entity';
 
 @Entity('roles')
 export class Role {
-  @PrimaryGeneratedColumn({ name: 'id_rol' })
-  idRol: number;
+  @PrimaryGeneratedColumn({ name: 'id_role' })
+  idRole: number;
 
-  @Column({ name: 'nombre_rol', type: 'varchar', length: 50, unique: true })
-  nombreRol: string;
+  @Column({ name: 'role_name', type: 'varchar', length: 50, unique: true })
+  roleName: string;
 
   @Column({ type: 'text', nullable: true })
-  descripcion: string;
+  description: string;
 
-  @CreateDateColumn({ name: 'fecha_creacion' })
-  fechaCreacion: Date;
+  @CreateDateColumn({ name: 'created_at' })
+  createdAt: Date;
 
   // Relación: Un rol tiene muchos usuarios
   @OneToMany(() => User, (user) => user.role)

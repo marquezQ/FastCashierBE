@@ -10,12 +10,12 @@ export class CreateRoleDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(50)
-  @IsIn(['ADMINISTRADOR', 'CAJERO', 'COCINA'], {
-    message: 'El rol debe ser: ADMINISTRADOR, CAJERO o COCINA',
+  @IsIn(['ADMIN', 'CASHIER', 'KITCHEN'], {
+    message: 'Role must be: ADMIN, CASHIER or KITCHEN',
   })
-  nombreRol: string;
+  roleName: string;
 
   @IsOptional()
   @IsString()
-  descripcion?: string;
+  description?: string;
 }

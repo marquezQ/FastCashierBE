@@ -18,7 +18,7 @@ export class RolesService {
   async create(createRoleDto: CreateRoleDto): Promise<Role> {
     // Verificar si el nombre del rol ya existe
     const roleExists = await this.roleRepository.findOne({
-      where: { nombreRol: createRoleDto.nombreRol },
+      where: { roleName: createRoleDto.roleName },
     });
 
     if (roleExists) {
@@ -31,14 +31,14 @@ export class RolesService {
 
   async findAll(): Promise<Role[]> {
     return await this.roleRepository.find({
-      order: { fechaCreacion: 'DESC' },
+      order: { createdAt: 'DESC' },
     });
   }
 
   async findOne(id: number): Promise<Role> {
     const role = await this.roleRepository.findOne({
-      where: { idRol: id },
-      relations: ['users'], // Incluir usuarios relacionados
+      where: { idRole: id },
+      relations: ['users'],
     });
 
     if (!role) {
@@ -48,9 +48,9 @@ export class RolesService {
     return role;
   }
 
-  async findByName(nombreRol: string): Promise<Role | null> {
+  async findByName(roleName: string): Promise<Role | null> {
     return await this.roleRepository.findOne({
-      where: { nombreRol },
+      where: { roleName },
     });
   }
 
@@ -58,9 +58,9 @@ export class RolesService {
     const role = await this.findOne(id);
 
     // Si se intenta actualizar el nombre, verificar que no exista
-    if (updateRoleDto.nombreRol && updateRoleDto.nombreRol !== role.nombreRol) {
+    if (updateRoleDto.roleName && updateRoleDto.roleName !== role.roleName) {
       const roleExists = await this.roleRepository.findOne({
-        where: { nombreRol: updateRoleDto.nombreRol },
+        where: { roleName: updateRoleDto.roleName },
       });
 
       if (roleExists) {
@@ -85,25 +85,25 @@ export class RolesService {
     await this.roleRepository.remove(role);
   }
 
-  // Método útil: Inicializar roles por defecto
+  // Seed de roles por defecto
   async seedDefaultRoles(): Promise<void> {
     const defaultRoles = [
       {
-        nombreRol: 'ADMINISTRADOR',
-        descripcion: 'Acceso total al sistema',
+        roleName: 'ADMIN',
+        description: 'Full system access',
       },
       {
-        nombreRol: 'CAJERO',
-        descripcion: 'Gestión de ventas y caja',
+        roleName: 'CASHIER',
+        description: 'Sales and cash management',
       },
       {
-        nombreRol: 'COCINA',
-        descripcion: 'Gestión de pedidos y cocina',
+        roleName: 'KITCHEN',
+        description: 'Order and kitchen management',
       },
     ];
 
     for (const roleData of defaultRoles) {
-      const exists = await this.findByName(roleData.nombreRol);
+      const exists = await this.findByName(roleData.roleName);
       if (!exists) {
         await this.create(roleData);
       }
