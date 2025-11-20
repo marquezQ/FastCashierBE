@@ -202,4 +202,27 @@ export class CashierSessionsService {
 
     await this.sessionRepository.remove(session);
   }
+  // Agregar este método al final de la clase CashierSessionsService
+  async addOrderToSession(
+    sessionId: number,
+    orderTotal: number,
+    paymentMethod: 'CASH' | 'QR',
+  ): Promise<void> {
+    const session = await this.findOne(sessionId);
+
+    if (session.status === 'CLOSED') {
+      throw new BadRequestException('Cannot add orders to a closed session');
+    }
+
+    if (paymentMethod === 'CASH') {
+      session.totalCash = Number(session.totalCash) + Number(orderTotal);
+    } else if (paymentMethod === 'QR') {
+      session.totalQr = Number(session.totalQr) + Number(orderTotal);
+    }
+
+    session.totalSales = Number(session.totalSales) + Number(orderTotal);
+    session.orderCount += 1;
+
+    await this.sessionRepository.save(session);
+  }
 }
