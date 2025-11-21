@@ -9,6 +9,7 @@ import { Order } from './entities/order.entity';
 import { CreateOrderDto, UpdateOrderDto, UpdateOrderStatusDto } from './dto';
 import { CashierSessionsService } from '../cashier-sessions/cashier-sessions.service';
 import { OrderDetailsService } from '../order-details/order-details.service';
+import { ProductsService } from '../products/products.service';
 
 @Injectable()
 export class OrdersService {
@@ -17,6 +18,7 @@ export class OrdersService {
     private readonly orderRepository: Repository<Order>,
     private readonly cashierSessionsService: CashierSessionsService,
     private readonly orderDetailsService: OrderDetailsService,
+    private readonly productsService: ProductsService,
   ) {}
 
   async create(createOrderDto: CreateOrderDto): Promise<Order> {
@@ -29,9 +31,16 @@ export class OrdersService {
       throw new BadRequestException('Cannot create order in a closed session');
     }
 
-    // Calcular totales desde los items
+    // Obtener productos y validar disponibilidad
+    const productIds = createOrderDto.items.map((item) => item.productId);
+    const products = await this.productsService.findByIds(productIds);
+
+    // Calcular totales desde los productos
     const { subtotal, total } =
-      await this.orderDetailsService.calculateOrderTotals(createOrderDto.items);
+      await this.orderDetailsService.calculateOrderTotals(
+        createOrderDto.items,
+        products,
+      );
 
     // Calcular cambio si es efectivo
     let changeAmount = 0;
@@ -45,7 +54,7 @@ export class OrdersService {
     // Generar número de pedido único
     const orderNumber = await this.generateOrderNumber();
 
-    // Crear orden (sin items por ahora)
+    // Crear orden
     const order = this.orderRepository.create({
       orderNumber,
       sessionId: createOrderDto.sessionId,
@@ -63,10 +72,11 @@ export class OrdersService {
     // Guardar orden
     const savedOrder = await this.orderRepository.save(order);
 
-    // Crear detalles de la orden
+    // Crear detalles de la orden con los productos
     await this.orderDetailsService.createDetails(
       savedOrder.idOrder,
       createOrderDto.items,
+      products,
     );
 
     // Actualizar totales de la sesión
@@ -82,7 +92,7 @@ export class OrdersService {
 
   async findAll(): Promise<Order[]> {
     return await this.orderRepository.find({
-      relations: ['session', 'cashier', 'cook', 'details'],
+      relations: ['session', 'cashier', 'cook', 'details', 'details.product'],
       order: { orderDate: 'DESC' },
     });
   }
@@ -90,7 +100,7 @@ export class OrdersService {
   async findOne(id: number): Promise<Order> {
     const order = await this.orderRepository.findOne({
       where: { idOrder: id },
-      relations: ['session', 'cashier', 'cook', 'details'],
+      relations: ['session', 'cashier', 'cook', 'details', 'details.product'],
     });
 
     if (!order) {
@@ -103,7 +113,7 @@ export class OrdersService {
   async findByOrderNumber(orderNumber: string): Promise<Order> {
     const order = await this.orderRepository.findOne({
       where: { orderNumber },
-      relations: ['session', 'cashier', 'cook', 'details'],
+      relations: ['session', 'cashier', 'cook', 'details', 'details.product'],
     });
 
     if (!order) {
@@ -116,7 +126,7 @@ export class OrdersService {
   async findBySession(sessionId: number): Promise<Order[]> {
     return await this.orderRepository.find({
       where: { sessionId },
-      relations: ['cashier', 'cook', 'details'],
+      relations: ['cashier', 'cook', 'details', 'details.product'],
       order: { orderDate: 'DESC' },
     });
   }
@@ -124,7 +134,7 @@ export class OrdersService {
   async findByStatus(status: string): Promise<Order[]> {
     return await this.orderRepository.find({
       where: { orderStatus: status },
-      relations: ['session', 'cashier', 'cook', 'details'],
+      relations: ['session', 'cashier', 'cook', 'details', 'details.product'],
       order: { orderDate: 'DESC' },
     });
   }
@@ -132,7 +142,7 @@ export class OrdersService {
   async findPendingOrders(): Promise<Order[]> {
     return await this.orderRepository.find({
       where: [{ orderStatus: 'PENDING' }, { orderStatus: 'IN_PREPARATION' }],
-      relations: ['session', 'cashier', 'cook', 'details'],
+      relations: ['session', 'cashier', 'cook', 'details', 'details.product'],
       order: { orderDate: 'ASC' },
     });
   }
@@ -142,7 +152,7 @@ export class OrdersService {
       where: {
         orderDate: Between(startDate, endDate),
       },
-      relations: ['session', 'cashier', 'cook', 'details'],
+      relations: ['session', 'cashier', 'cook', 'details', 'details.product'],
       order: { orderDate: 'DESC' },
     });
   }

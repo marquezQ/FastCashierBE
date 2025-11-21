@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { OrderDetail } from './entities/order-detail.entity';
 import { CreateOrderDetailDto } from './dto';
+import { Product } from '../products/entities/product.entity';
 
 @Injectable()
 export class OrderDetailsService {
@@ -14,15 +15,27 @@ export class OrderDetailsService {
   async createDetails(
     orderId: number,
     items: CreateOrderDetailDto[],
+    products: Product[],
   ): Promise<OrderDetail[]> {
     const details = items.map((item) => {
-      const subtotal = item.quantity * item.unitPrice;
+      // Buscar el producto correspondiente
+      const product = products.find((p) => p.idProduct === item.productId);
+
+      if (!product) {
+        throw new NotFoundException(
+          `Product with ID ${item.productId} not found`,
+        );
+      }
+
+      // Usar el precio actual del producto
+      const unitPrice = Number(product.price);
+      const subtotal = item.quantity * unitPrice;
 
       return this.orderDetailRepository.create({
         orderId,
         productId: item.productId,
         quantity: item.quantity,
-        unitPrice: item.unitPrice,
+        unitPrice,
         subtotal,
       });
     });
@@ -33,6 +46,7 @@ export class OrderDetailsService {
   async findByOrder(orderId: number): Promise<OrderDetail[]> {
     return await this.orderDetailRepository.find({
       where: { orderId },
+      relations: ['product'],
       order: { idDetail: 'ASC' },
     });
   }
@@ -40,6 +54,7 @@ export class OrderDetailsService {
   async findOne(id: number): Promise<OrderDetail> {
     const detail = await this.orderDetailRepository.findOne({
       where: { idDetail: id },
+      relations: ['product'],
     });
 
     if (!detail) {
@@ -49,16 +64,23 @@ export class OrderDetailsService {
     return detail;
   }
 
-  async calculateOrderTotals(items: CreateOrderDetailDto[]): Promise<{
+  async calculateOrderTotals(
+    items: CreateOrderDetailDto[],
+    products: Product[],
+  ): Promise<{
     subtotal: number;
     total: number;
   }> {
     const subtotal = items.reduce((sum, item) => {
-      return sum + item.quantity * item.unitPrice;
+      const product = products.find((p) => p.idProduct === item.productId);
+      if (!product) {
+        throw new NotFoundException(
+          `Product with ID ${item.productId} not found`,
+        );
+      }
+      return sum + item.quantity * Number(product.price);
     }, 0);
 
-    // Por ahora subtotal = total
-    // En el futuro aquí podrías agregar descuentos, impuestos, etc.
     const total = subtotal;
 
     return {

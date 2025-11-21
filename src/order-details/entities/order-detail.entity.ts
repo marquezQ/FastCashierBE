@@ -6,6 +6,7 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { Order } from '../../orders/entities/order.entity';
+import { Product } from '../../products/entities/product.entity';
 
 @Entity('order_details')
 export class OrderDetail {
@@ -27,15 +28,17 @@ export class OrderDetail {
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   subtotal: number;
 
-  // Relación: Muchos detalles pertenecen a una orden
+  // Relación con Order
   @ManyToOne(() => Order, (order) => order.details, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'order_id' })
   order: Order;
 
-  // Nota: La relación con Product la haremos cuando implementemos productos
-  // @ManyToOne(() => Product, { nullable: false })
-  // @JoinColumn({ name: 'product_id' })
-  // product: Product;
+  //RELACIÓN con Product
+  @ManyToOne(() => Product, (product) => product.orderDetails, {
+    nullable: false,
+  })
+  @JoinColumn({ name: 'product_id' })
+  product: Product;
 }

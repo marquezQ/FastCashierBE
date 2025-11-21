@@ -10,9 +10,4 @@ export class CreateOrderDetailDto {
   @Min(1)
   @IsNotEmpty()
   quantity: number;
-
-  @IsNumber()
-  @IsPositive()
-  @IsNotEmpty()
-  unitPrice: number;
 }
