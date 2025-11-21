@@ -4,11 +4,13 @@ import {
   PrimaryGeneratedColumn,
   CreateDateColumn,
   ManyToOne,
+  OneToMany,
   JoinColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { CashierSession } from '../../cashier-sessions/entities/cashier-session.entity';
+import { OrderDetail } from '../../order-details/entities/order-detail.entity';
 
 @Entity('orders')
 export class Order {
@@ -96,4 +98,11 @@ export class Order {
   @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: 'cook_id' })
   cook: User;
+
+  //Una orden tiene muchos detalles
+  @OneToMany(() => OrderDetail, (detail) => detail.order, {
+    cascade: true,
+    eager: true,
+  })
+  details: OrderDetail[];
 }

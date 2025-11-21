@@ -6,7 +6,12 @@ import {
   IsString,
   IsIn,
   MaxLength,
+  IsArray,
+  ValidateNested,
+  ArrayMinSize,
 } from 'class-validator';
+import { CreateOrderDetailDto } from '../../order-details/dto';
+import { Type } from 'class-transformer';
 
 export class CreateOrderDto {
   @IsNumber()
@@ -16,16 +21,6 @@ export class CreateOrderDto {
   @IsNumber()
   @IsNotEmpty()
   cashierId: number;
-
-  @IsNumber()
-  @IsPositive()
-  @IsNotEmpty()
-  subtotal: number;
-
-  @IsNumber()
-  @IsPositive()
-  @IsNotEmpty()
-  total: number;
 
   @IsString()
   @IsNotEmpty()
@@ -47,4 +42,11 @@ export class CreateOrderDto {
   @IsOptional()
   @IsString()
   observations?: string;
+
+  // ✨ NUEVO: Array de items
+  @IsArray()
+  @ArrayMinSize(1, { message: 'Order must have at least one item' })
+  @ValidateNested({ each: true })
+  @Type(() => CreateOrderDetailDto)
+  items: CreateOrderDetailDto[];
 }

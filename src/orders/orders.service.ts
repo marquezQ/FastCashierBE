@@ -8,6 +8,7 @@ import { Repository, Between } from 'typeorm';
 import { Order } from './entities/order.entity';
 import { CreateOrderDto, UpdateOrderDto, UpdateOrderStatusDto } from './dto';
 import { CashierSessionsService } from '../cashier-sessions/cashier-sessions.service';
+import { OrderDetailsService } from '../order-details/order-details.service';
 
 @Injectable()
 export class OrdersService {
@@ -15,6 +16,7 @@ export class OrdersService {
     @InjectRepository(Order)
     private readonly orderRepository: Repository<Order>,
     private readonly cashierSessionsService: CashierSessionsService,
+    private readonly orderDetailsService: OrderDetailsService,
   ) {}
 
   async create(createOrderDto: CreateOrderDto): Promise<Order> {
@@ -27,41 +29,60 @@ export class OrdersService {
       throw new BadRequestException('Cannot create order in a closed session');
     }
 
-    // Generar número de pedido único
-    const orderNumber = await this.generateOrderNumber();
+    // Calcular totales desde los items
+    const { subtotal, total } =
+      await this.orderDetailsService.calculateOrderTotals(createOrderDto.items);
 
     // Calcular cambio si es efectivo
     let changeAmount = 0;
     if (createOrderDto.paymentMethod === 'CASH') {
-      changeAmount = createOrderDto.amountPaid - createOrderDto.total;
+      changeAmount = createOrderDto.amountPaid - total;
       if (changeAmount < 0) {
         throw new BadRequestException('Amount paid is less than total');
       }
     }
 
-    // Crear orden
+    // Generar número de pedido único
+    const orderNumber = await this.generateOrderNumber();
+
+    // Crear orden (sin items por ahora)
     const order = this.orderRepository.create({
-      ...createOrderDto,
       orderNumber,
+      sessionId: createOrderDto.sessionId,
+      cashierId: createOrderDto.cashierId,
+      subtotal,
+      total,
+      paymentMethod: createOrderDto.paymentMethod,
+      amountPaid: createOrderDto.amountPaid,
       changeAmount,
+      customer: createOrderDto.customer,
+      observations: createOrderDto.observations,
       orderStatus: 'PENDING',
     });
 
+    // Guardar orden
     const savedOrder = await this.orderRepository.save(order);
+
+    // Crear detalles de la orden
+    await this.orderDetailsService.createDetails(
+      savedOrder.idOrder,
+      createOrderDto.items,
+    );
 
     // Actualizar totales de la sesión
     await this.cashierSessionsService.addOrderToSession(
       createOrderDto.sessionId,
-      createOrderDto.total,
+      total,
       createOrderDto.paymentMethod as 'CASH' | 'QR',
     );
 
-    return savedOrder;
+    // Retornar orden con detalles
+    return await this.findOne(savedOrder.idOrder);
   }
 
   async findAll(): Promise<Order[]> {
     return await this.orderRepository.find({
-      relations: ['session', 'cashier', 'cook'],
+      relations: ['session', 'cashier', 'cook', 'details'],
       order: { orderDate: 'DESC' },
     });
   }
@@ -69,7 +90,7 @@ export class OrdersService {
   async findOne(id: number): Promise<Order> {
     const order = await this.orderRepository.findOne({
       where: { idOrder: id },
-      relations: ['session', 'cashier', 'cook'],
+      relations: ['session', 'cashier', 'cook', 'details'],
     });
 
     if (!order) {
@@ -82,7 +103,7 @@ export class OrdersService {
   async findByOrderNumber(orderNumber: string): Promise<Order> {
     const order = await this.orderRepository.findOne({
       where: { orderNumber },
-      relations: ['session', 'cashier', 'cook'],
+      relations: ['session', 'cashier', 'cook', 'details'],
     });
 
     if (!order) {
@@ -95,7 +116,7 @@ export class OrdersService {
   async findBySession(sessionId: number): Promise<Order[]> {
     return await this.orderRepository.find({
       where: { sessionId },
-      relations: ['cashier', 'cook'],
+      relations: ['cashier', 'cook', 'details'],
       order: { orderDate: 'DESC' },
     });
   }
@@ -103,7 +124,7 @@ export class OrdersService {
   async findByStatus(status: string): Promise<Order[]> {
     return await this.orderRepository.find({
       where: { orderStatus: status },
-      relations: ['session', 'cashier', 'cook'],
+      relations: ['session', 'cashier', 'cook', 'details'],
       order: { orderDate: 'DESC' },
     });
   }
@@ -111,7 +132,7 @@ export class OrdersService {
   async findPendingOrders(): Promise<Order[]> {
     return await this.orderRepository.find({
       where: [{ orderStatus: 'PENDING' }, { orderStatus: 'IN_PREPARATION' }],
-      relations: ['session', 'cashier', 'cook'],
+      relations: ['session', 'cashier', 'cook', 'details'],
       order: { orderDate: 'ASC' },
     });
   }
@@ -121,7 +142,7 @@ export class OrdersService {
       where: {
         orderDate: Between(startDate, endDate),
       },
-      relations: ['session', 'cashier', 'cook'],
+      relations: ['session', 'cashier', 'cook', 'details'],
       order: { orderDate: 'DESC' },
     });
   }
