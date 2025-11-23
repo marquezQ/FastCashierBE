@@ -104,4 +104,42 @@ export class UsersService {
       lastAccess: new Date(),
     });
   }
+  async seedDefaultUsers(): Promise<void> {
+    const defaultUsers = [
+      {
+        fullName: 'Administrador del Sistema',
+        email: 'admin@gmail.com',
+        password: '123456',
+        phone: '70000001',
+        roleId: 1, // ADMIN
+        isActive: true,
+      },
+      {
+        fullName: 'Usuario Cajero',
+        email: 'cashier@gmail.com',
+        password: '123456',
+        phone: '70000002',
+        roleId: 2, // CASHIER
+        isActive: true,
+      },
+      {
+        fullName: 'Usuario Cocina',
+        email: 'cook@gmail.com',
+        password: '123456',
+        phone: '70000003',
+        roleId: 3, // KITCHEN
+        isActive: true,
+      },
+    ];
+
+    for (const userData of defaultUsers) {
+      const exists = await this.userRepository.findOne({
+        where: { email: userData.email },
+      });
+
+      if (!exists) {
+        await this.create(userData);
+      }
+    }
+  }
 }
