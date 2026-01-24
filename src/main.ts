@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { RolesService } from './roles/roles.service';
 import { UsersService } from './users/users.service';
@@ -24,6 +25,37 @@ async function bootstrap() {
 
   // Prefijo global
   app.setGlobalPrefix('api');
+
+  // ============ SWAGGER CONFIGURATION ============
+  const config = new DocumentBuilder()
+    .setTitle('FastCashier API')
+    .setDescription('API para sistema de punto de venta (POS)')
+    .setVersion('1.0')
+    .addTag('Authentication', 'Endpoints de autenticación y registro')
+    .addTag('Users', 'Gestión de usuarios')
+    .addTag('Roles', 'Gestión de roles')
+    .addTag('Categories', 'Gestión de categorías de productos')
+    .addTag('Products', 'Gestión de productos')
+    .addTag('Orders', 'Gestión de órdenes/pedidos')
+    .addTag('Cashier Sessions', 'Gestión de sesiones de caja')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'JWT',
+        description: 'Enter JWT token',
+        in: 'header',
+      },
+      'JWT-auth', // Este es el nombre que usaremos en los controllers
+    )
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api/docs', app, document);
+
+  console.log('📚 Swagger documentation available at: http://localhost:3000/api/docs');
+  // ===============================================
 
   // EJECUTAR SEEDERS
   console.log('🌱 Starting database seeds...\n');
