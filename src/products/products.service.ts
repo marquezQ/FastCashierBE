@@ -121,13 +121,14 @@ export class ProductsService {
     const product = await this.findOne(id);
 
     // Verificar si tiene detalles de pedido asociados
-    const hasOrders = await this.productRepository
+    const orderDetailsCount = await this.productRepository
       .createQueryBuilder('product')
       .leftJoin('product.orderDetails', 'orderDetail')
       .where('product.idProduct = :id', { id })
+      .andWhere('orderDetail.idDetail IS NOT NULL')
       .getCount();
 
-    if (hasOrders > 0) {
+    if (orderDetailsCount > 0) {
       throw new BadRequestException(
         'Cannot deactivate product with order history. Product will be marked as inactive.',
       );
