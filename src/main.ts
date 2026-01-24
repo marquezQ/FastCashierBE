@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import { RolesService } from './roles/roles.service';
 import { UsersService } from './users/users.service';
+import { CategoriesService } from './categories/categories.service'; // NUEVO
 import { ProductsService } from './products/products.service';
 
 async function bootstrap() {
@@ -25,34 +26,42 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
 
   // EJECUTAR SEEDERS
-  console.log('Starting database seeds...\n');
+  console.log('🌱 Starting database seeds...\n');
 
   try {
-    //ROLES (primero porque Users depende de ellos)
-    console.log('Seeding roles...');
+    // 1. ROLES (primero porque Users depende de ellos)
+    console.log('📋 Seeding roles...');
     const rolesService = app.get(RolesService);
     await rolesService.seedDefaultRoles();
-    console.log('Roles seeded: ADMIN, CASHIER, KITCHEN\n');
+    console.log('✅ Roles seeded: ADMIN, CASHIER, KITCHEN\n');
 
-    //USUARIOS
-    console.log('⏳ Seeding users...');
+    // 2. USUARIOS
+    console.log('👥 Seeding users...');
     const usersService = app.get(UsersService);
     await usersService.seedDefaultUsers();
-    console.log('Users seeded:');
-    console.log('admin@gmail.com / 123456 (Admin)');
-    console.log('cashier@gmail.com / 123456 (Cashier)');
-    console.log('cook@gmail.com / 123456 (Kitchen)\n');
+    console.log('✅ Users seeded:');
+    console.log('   • admin@gmail.com / 123456 (Admin)');
+    console.log('   • cashier@gmail.com / 123456 (Cashier)');
+    console.log('   • cook@gmail.com / 123456 (Kitchen)\n');
 
-    //PRODUCTOS
-    console.log('Seeding products...');
+    // 3. CATEGORÍAS (NUEVO - antes de productos)
+    console.log('🏷️  Seeding categories...');
+    const categoriesService = app.get(CategoriesService);
+    await categoriesService.seedDefaultCategories();
+    console.log('✅ Categories seeded: COMIDA, REFRESCOS, BEBIDAS CALIENTES, POSTRES\n');
+
+    // 4. PRODUCTOS (después de categorías)
+    console.log('🍔 Seeding products...');
     const productsService = app.get(ProductsService);
     await productsService.seedDefaultProducts();
-    console.log('Products seeded: 4 products created\n');
+    console.log('✅ Products seeded: 5 products created with categories\n');
 
-    console.log('All seeds completed successfully!\n');
+    console.log('🎉 All seeds completed successfully!\n');
   } catch (error) {
-    console.error('Error during seeding:', error);
+    console.error('❌ Error during seeding:', error);
     console.error('Please check your database connection and try again.\n');
+    // Opcional: Si falla, no iniciar el servidor
+    // process.exit(1);
   }
 
   // Iniciar servidor
@@ -62,18 +71,23 @@ async function bootstrap() {
   await app.listen(port);
 
   console.log('═══════════════════════════════════════════════════');
-  console.log(`Server running on: http://localhost:${port}/api`);
+  console.log(`🚀 Server running on: http://localhost:${port}/api`);
   console.log('═══════════════════════════════════════════════════');
-  console.log('\nDEFAULT CREDENTIALS:\n');
-  console.log('  Admin:');
-  console.log('    Email: admin@gmail.com');
-  console.log('    Password: 123456\n');
-  console.log('  Cashier:');
-  console.log('    Email: cashier@gmail.com');
-  console.log('    Password: 123456\n');
-  console.log('  Cook:');
-  console.log('    Email: cook@gmail.com');
-  console.log('    Password: 123456\n');
+  console.log('\n🔐 DEFAULT CREDENTIALS:\n');
+  console.log('  👨‍💼 Admin:');
+  console.log('     Email: admin@gmail.com');
+  console.log('     Password: 123456\n');
+  console.log('  💰 Cashier:');
+  console.log('     Email: cashier@gmail.com');
+  console.log('     Password: 123456\n');
+  console.log('  👨‍🍳 Cook:');
+  console.log('     Email: cook@gmail.com');
+  console.log('     Password: 123456\n');
+  console.log('═══════════════════════════════════════════════════');
+  console.log('\n📚 API Endpoints:');
+  console.log('   • Categories: http://localhost:' + port + '/api/categories');
+  console.log('   • Products: http://localhost:' + port + '/api/products');
+  console.log('   • Users: http://localhost:' + port + '/api/users');
   console.log('═══════════════════════════════════════════════════\n');
 }
 void bootstrap();

@@ -19,56 +19,87 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 
 @Controller('products')
-@UseGuards(JwtAuthGuard, RolesGuard) //Proteger todo el controlador
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class ProductsController {
-  constructor(private readonly productsService: ProductsService) {}
+  constructor(private readonly productsService: ProductsService) { }
 
   @Post()
-  @Roles('ADMIN') //Solo ADMIN puede crear productos
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.CREATED)
   create(@Body() createProductDto: CreateProductDto) {
     return this.productsService.create(createProductDto);
   }
 
   @Post('seed')
-  @Roles('ADMIN') //Solo ADMIN
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.OK)
   seed() {
     return this.productsService.seedDefaultProducts();
   }
 
   @Get()
-  @Roles('ADMIN', 'CASHIER', 'KITCHEN') //Todos pueden ver productos
+  @Roles('ADMIN', 'CASHIER', 'KITCHEN')
   findAll(@Query('includeInactive') includeInactive?: string) {
     return this.productsService.findAll(includeInactive === 'true');
   }
 
   @Get('active')
-  @Roles('ADMIN', 'CASHIER', 'KITCHEN') //Todos pueden ver activos
+  @Roles('ADMIN', 'CASHIER', 'KITCHEN')
   findActive() {
     return this.productsService.findActive();
   }
 
+  @Get('inactive')
+  @Roles('ADMIN', 'CASHIER', 'KITCHEN')
+  findInactive() {
+    return this.productsService.findInactive();
+  }
+
+  // ============ NUEVOS ENDPOINTS ============
+
+  // ENDPOINT 1: Para tu dashboard con tabs (Método 2)
+  @Get('grouped-by-category')
+  @Roles('ADMIN', 'CASHIER', 'KITCHEN')
+  findGroupedByCategory() {
+    return this.productsService.findGroupedByCategory();
+  }
+
+  // ENDPOINT 2: Productos con información de categoría (Método 1)
+  @Get('with-category')
+  @Roles('ADMIN', 'CASHIER', 'KITCHEN')
+  findAllWithCategory() {
+    return this.productsService.findAllWithCategory();
+  }
+
+  // ENDPOINT 3: Filtrar productos por categoría
+  @Get('by-category/:categoryId')
+  @Roles('ADMIN', 'CASHIER', 'KITCHEN')
+  findByCategory(@Param('categoryId', ParseIntPipe) categoryId: number) {
+    return this.productsService.findByCategory(categoryId);
+  }
+
+  // ==========================================
+
   @Get('search')
-  @Roles('ADMIN', 'CASHIER', 'KITCHEN') //Todos pueden buscar
+  @Roles('ADMIN', 'CASHIER', 'KITCHEN')
   search(@Query('q') query: string) {
     return this.productsService.search(query);
   }
 
   @Get('code/:code')
-  @Roles('ADMIN', 'CASHIER', 'KITCHEN') //Todos
+  @Roles('ADMIN', 'CASHIER', 'KITCHEN')
   findByCode(@Param('code') code: string) {
     return this.productsService.findByCode(code);
   }
 
   @Get(':id')
-  @Roles('ADMIN', 'CASHIER', 'KITCHEN') //Todos
+  @Roles('ADMIN', 'CASHIER', 'KITCHEN')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.productsService.findOne(id);
   }
 
   @Patch(':id')
-  @Roles('ADMIN') //Solo ADMIN puede actualizar
+  @Roles('ADMIN')
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateProductDto: UpdateProductDto,
@@ -77,16 +108,17 @@ export class ProductsController {
   }
 
   @Patch(':id/toggle-active')
-  @Roles('ADMIN') //Solo ADMIN
+  @Roles('ADMIN')
   @HttpCode(HttpStatus.OK)
   toggleActive(@Param('id', ParseIntPipe) id: number) {
     return this.productsService.toggleActive(id);
   }
 
   @Delete(':id')
-  @Roles('ADMIN') //Solo ADMIN puede eliminar
-  @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.productsService.remove(id);
+  @Roles('ADMIN')
+  @HttpCode(HttpStatus.OK)
+  async remove(@Param('id', ParseIntPipe) id: number) {
+    await this.productsService.remove(id);
+    return { message: 'Product deactivated successfully' };
   }
 }

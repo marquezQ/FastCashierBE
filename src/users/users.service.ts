@@ -14,7 +14,7 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-  ) {}
+  ) { }
 
   async create(createUserDto: CreateUserDto): Promise<User> {
     // Verificar si el email ya existe
@@ -41,7 +41,23 @@ export class UsersService {
 
   async findAll(): Promise<User[]> {
     return await this.userRepository.find({
+      //where: { isActive: true },
+      relations: ['role'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async findActive(): Promise<User[]> {
+    return await this.userRepository.find({
       where: { isActive: true },
+      relations: ['role'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async findInactive(): Promise<User[]> {
+    return await this.userRepository.find({
+      where: { isActive: false },
       relations: ['role'],
       order: { createdAt: 'DESC' },
     });

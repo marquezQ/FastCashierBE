@@ -21,7 +21,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 @Controller('users')
 @UseGuards(JwtAuthGuard, RolesGuard) //Proteger todo el controlador
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
   @Post()
   @Roles('ADMIN') //Solo ADMIN puede crear usuarios
@@ -34,6 +34,18 @@ export class UsersController {
   @Roles('ADMIN') //Solo ADMIN puede ver todos los usuarios
   findAll() {
     return this.usersService.findAll();
+  }
+
+  @Get('active')
+  @Roles('ADMIN')
+  findActive() {
+    return this.usersService.findActive();
+  }
+
+  @Get('inactive')
+  @Roles('ADMIN')
+  findInactive() {
+    return this.usersService.findInactive();
   }
 
   @Get('me')
@@ -59,8 +71,9 @@ export class UsersController {
 
   @Delete(':id')
   @Roles('ADMIN') //Solo ADMIN
-  @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.usersService.remove(id);
+  @HttpCode(HttpStatus.OK)
+  async remove(@Param('id', ParseIntPipe) id: number) {
+    await this.usersService.remove(id);
+    return { message: 'User deactivated successfully' };
   }
 }

@@ -8,13 +8,15 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like } from 'typeorm';
 import { Product } from './entities/product.entity';
 import { CreateProductDto, UpdateProductDto } from './dto';
-
+import { Category } from '../categories/entities/category.entity';
 @Injectable()
 export class ProductsService {
   constructor(
     @InjectRepository(Product)
     private readonly productRepository: Repository<Product>,
-  ) {}
+    @InjectRepository(Category)
+    private readonly categoryRepository: Repository<Category>,
+  ) { }
 
   async create(createProductDto: CreateProductDto): Promise<Product> {
     // Verificar si el código ya existe
@@ -42,6 +44,13 @@ export class ProductsService {
   async findActive(): Promise<Product[]> {
     return await this.productRepository.find({
       where: { isActive: true },
+      order: { name: 'ASC' },
+    });
+  }
+
+  async findInactive(): Promise<Product[]> {
+    return await this.productRepository.find({
+      where: { isActive: false },
       order: { name: 'ASC' },
     });
   }
@@ -120,11 +129,13 @@ export class ProductsService {
 
     if (hasOrders > 0) {
       throw new BadRequestException(
-        'Cannot delete product with associated orders. Consider deactivating it instead.',
+        'Cannot deactivate product with order history. Product will be marked as inactive.',
       );
     }
 
-    await this.productRepository.remove(product);
+    // Soft delete: cambiar isActive a false
+    product.isActive = false;
+    await this.productRepository.save(product);
   }
 
   // Validar que un producto esté disponible para venta
@@ -156,8 +167,59 @@ export class ProductsService {
 
     return products;
   }
+  // Buscar productos por categoría
+  async findByCategory(categoryId: number): Promise<Product[]> {
+    return await this.productRepository.find({
+      where: {
+        idCategory: categoryId,
+        isActive: true,
+      },
+      relations: ['category'],
+      order: { name: 'ASC' },
+    });
+  }
 
-  // Seed de productos por defecto
+  // Buscar todos los productos con su categoría
+  async findAllWithCategory(): Promise<Product[]> {
+    return await this.productRepository.find({
+      where: { isActive: true },
+      relations: ['category'],
+      order: {
+        name: 'ASC',
+      },
+    });
+  }
+  async findGroupedByCategory(): Promise<any> {
+    const categories = await this.categoryRepository.find({
+      where: { isActive: true },
+      relations: ['products'],
+      order: { order: 'ASC' },
+    });
+
+    return categories.map((category) => ({
+      idCategory: category.idCategory,
+      name: category.name,
+      description: category.description,
+      imageUrl: category.imageUrl,
+      order: category.order,
+      productCount: category.products.filter((p) => p.isActive).length,
+      products: category.products
+        .filter((p) => p.isActive)
+        .map((p) => ({
+          idProduct: p.idProduct,
+          code: p.code,
+          name: p.name,
+          description: p.description,
+          price: p.price,
+          imageUrl: p.imageUrl,
+          isActive: p.isActive,
+          createdAt: p.createdAt,
+          updatedAt: p.updatedAt,
+        })),
+    }));
+  }
+
+  // Seed de productos por defecto con categorías
   async seedDefaultProducts(): Promise<void> {
     const defaultProducts = [
       {
@@ -166,6 +228,7 @@ export class ProductsService {
         description: 'Arroz, papa frita, platano frito y una presa de broaster',
         price: 20.0,
         imageUrl: undefined,
+        idCategory: 1, // COMIDA
       },
       {
         code: 'PROD-002',
@@ -174,6 +237,7 @@ export class ProductsService {
           'Arroz, papa frita, platano frito y dos presas de broaster',
         price: 32.0,
         imageUrl: undefined,
+        idCategory: 1, // COMIDA
       },
       {
         code: 'PROD-003',
@@ -181,6 +245,7 @@ export class ProductsService {
         description: 'Porción de papas fritas crujientes',
         price: 10.0,
         imageUrl: undefined,
+        idCategory: 1, // COMIDA
       },
       {
         code: 'PROD-004',
@@ -188,6 +253,7 @@ export class ProductsService {
         description: 'Bebida gaseosa 2 Litros',
         price: 15.0,
         imageUrl: undefined,
+        idCategory: 2, // REFRESCOS
       },
       {
         code: 'PROD-005',
@@ -195,6 +261,7 @@ export class ProductsService {
         description: 'Hervido tostada',
         price: 15.0,
         imageUrl: undefined,
+        idCategory: 2, // REFRESCOS
       },
     ];
 
@@ -204,7 +271,17 @@ export class ProductsService {
       });
 
       if (!exists) {
+        // Si no existe, crear nuevo producto
         await this.create(productData);
+      } else {
+        // SI YA EXISTE, actualizar con la categoría
+        console.log(` Product ${productData.code} already exists, updating category...`);
+
+        // Actualizar el producto existente
+        await this.productRepository.update(
+          { code: productData.code },
+          { idCategory: productData.idCategory }
+        );
       }
     }
   }

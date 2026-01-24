@@ -1,43 +1,30 @@
 import {
-  IsNotEmpty,
   IsString,
-  IsNumber,
-  IsPositive,
   IsOptional,
+  IsInt,
   IsBoolean,
   MaxLength,
-  IsInt,
+  IsNotEmpty,
 } from 'class-validator';
 
-export class CreateProductDto {
+export class CreateCategoryDto {
   @IsString()
   @IsNotEmpty()
-  @MaxLength(50)
-  code: string;
-
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(150)
+  @MaxLength(100)
   name: string;
 
   @IsOptional()
   @IsString()
   description?: string;
 
-  @IsNumber()
-  @IsPositive()
-  @IsNotEmpty()
-  price: number;
-
-  @IsOptional()
-  @IsInt()
-  @IsPositive()
-  idCategory?: number;
-
   @IsOptional()
   @IsString()
   @MaxLength(255)
   imageUrl?: string;
+
+  @IsOptional()
+  @IsInt()
+  order?: number;
 
   @IsOptional()
   @IsBoolean()
