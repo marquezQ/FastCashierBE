@@ -8,6 +8,7 @@ import {
   MaxLength,
   IsInt,
 } from 'class-validator';
+import { Type, Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateProductDto {
@@ -43,6 +44,7 @@ export class CreateProductDto {
     description: 'Precio del producto',
     example: 25.50,
   })
+  @Type(() => Number)
   @IsNumber()
   @IsPositive()
   @IsNotEmpty()
@@ -53,6 +55,7 @@ export class CreateProductDto {
     example: 1,
   })
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @IsPositive()
   idCategory?: number;
@@ -73,6 +76,11 @@ export class CreateProductDto {
     default: true,
   })
   @IsOptional()
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
   @IsBoolean()
   isActive?: boolean;
 }

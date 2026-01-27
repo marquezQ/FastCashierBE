@@ -9,6 +9,8 @@ import { Repository, Like } from 'typeorm';
 import { Product } from './entities/product.entity';
 import { CreateProductDto, UpdateProductDto } from './dto';
 import { Category } from '../categories/entities/category.entity';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
+
 @Injectable()
 export class ProductsService {
   constructor(
@@ -16,9 +18,10 @@ export class ProductsService {
     private readonly productRepository: Repository<Product>,
     @InjectRepository(Category)
     private readonly categoryRepository: Repository<Category>,
+    private readonly cloudinaryService: CloudinaryService,
   ) { }
 
-  async create(createProductDto: CreateProductDto): Promise<Product> {
+  async create(createProductDto: CreateProductDto, file?: Express.Multer.File): Promise<Product> {
     // Verificar si el código ya existe
     const codeExists = await this.productRepository.findOne({
       where: { code: createProductDto.code },
@@ -26,6 +29,11 @@ export class ProductsService {
 
     if (codeExists) {
       throw new ConflictException('Product code already exists');
+    }
+
+    if (file) {
+      const result: any = await this.cloudinaryService.uploadImage(file);
+      createProductDto.imageUrl = result.secure_url;
     }
 
     const product = this.productRepository.create(createProductDto);
@@ -91,25 +99,43 @@ export class ProductsService {
   }
 
   async update(
-    id: number,
-    updateProductDto: UpdateProductDto,
-  ): Promise<Product> {
-    const product = await this.findOne(id);
+  id: number,
+  updateProductDto: UpdateProductDto,
+  file?: Express.Multer.File,
+): Promise<Product> {
 
-    // Si se intenta actualizar el código, verificar que no exista
-    if (updateProductDto.code && updateProductDto.code !== product.code) {
-      const codeExists = await this.productRepository.findOne({
-        where: { code: updateProductDto.code },
-      });
+  // 1. Buscar producto
+  const product = await this.findOne(id);
 
-      if (codeExists) {
-        throw new ConflictException('Product code already exists');
-      }
+  // 2. Validar código único si cambia
+  if (updateProductDto.code && updateProductDto.code !== product.code) {
+    const codeExists = await this.productRepository.findOne({
+      where: { code: updateProductDto.code },
+    });
+
+    if (codeExists) {
+      throw new ConflictException('Product code already exists');
+    }
+  }
+
+  // 3. Si viene imagen → subir a Cloudinary
+  if (file) {
+    const result = await this.cloudinaryService.uploadImage(file);
+
+    // eliminar imagen anterior
+    if (product.imageUrl) {
+      await this.cloudinaryService.deleteImage(product.imageUrl);
     }
 
-    this.productRepository.merge(product, updateProductDto);
-    return await this.productRepository.save(product);
+    updateProductDto.imageUrl = result.secure_url;
   }
+
+  // 4. PATCH real
+  this.productRepository.merge(product, updateProductDto);
+
+  // 5. Guardar
+  return await this.productRepository.save(product);
+}
 
   async toggleActive(id: number): Promise<Product> {
     const product = await this.findOne(id);
@@ -191,34 +217,32 @@ export class ProductsService {
     });
   }
   async findGroupedByCategory(): Promise<any> {
-    const categories = await this.categoryRepository.find({
-      where: { isActive: true },
-      relations: ['products'],
-      order: { order: 'ASC' },
-    });
+  const categories = await this.categoryRepository.find({
+    relations: ['products'],
+    order: { order: 'ASC' },
+  });
 
-    return categories.map((category) => ({
-      idCategory: category.idCategory,
-      name: category.name,
-      description: category.description,
-      imageUrl: category.imageUrl,
-      order: category.order,
-      productCount: category.products.filter((p) => p.isActive).length,
-      products: category.products
-        .filter((p) => p.isActive)
-        .map((p) => ({
-          idProduct: p.idProduct,
-          code: p.code,
-          name: p.name,
-          description: p.description,
-          price: p.price,
-          imageUrl: p.imageUrl,
-          isActive: p.isActive,
-          createdAt: p.createdAt,
-          updatedAt: p.updatedAt,
-        })),
-    }));
-  }
+  return categories.map((category) => ({
+    idCategory: category.idCategory,
+    name: category.name,
+    description: category.description,
+    imageUrl: category.imageUrl,
+    order: category.order,
+    productCount: category.products.length, // cuenta TODOS
+    products: category.products.map((p) => ({
+      idProduct: p.idProduct,
+      code: p.code,
+      name: p.name,
+      description: p.description,
+      price: p.price,
+      imageUrl: p.imageUrl,
+      isActive: p.isActive,
+      createdAt: p.createdAt,
+      updatedAt: p.updatedAt,
+    })),
+  }));
+}
+
 
   // Seed de productos por defecto con categorías
   async seedDefaultProducts(): Promise<void> {
