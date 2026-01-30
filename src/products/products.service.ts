@@ -99,43 +99,43 @@ export class ProductsService {
   }
 
   async update(
-  id: number,
-  updateProductDto: UpdateProductDto,
-  file?: Express.Multer.File,
-): Promise<Product> {
+    id: number,
+    updateProductDto: UpdateProductDto,
+    file?: Express.Multer.File,
+  ): Promise<Product> {
 
-  // 1. Buscar producto
-  const product = await this.findOne(id);
+    // 1. Buscar producto
+    const product = await this.findOne(id);
 
-  // 2. Validar código único si cambia
-  if (updateProductDto.code && updateProductDto.code !== product.code) {
-    const codeExists = await this.productRepository.findOne({
-      where: { code: updateProductDto.code },
-    });
+    // 2. Validar código único si cambia
+    if (updateProductDto.code && updateProductDto.code !== product.code) {
+      const codeExists = await this.productRepository.findOne({
+        where: { code: updateProductDto.code },
+      });
 
-    if (codeExists) {
-      throw new ConflictException('Product code already exists');
-    }
-  }
-
-  // 3. Si viene imagen → subir a Cloudinary
-  if (file) {
-    const result = await this.cloudinaryService.uploadImage(file);
-
-    // eliminar imagen anterior
-    if (product.imageUrl) {
-      await this.cloudinaryService.deleteImage(product.imageUrl);
+      if (codeExists) {
+        throw new ConflictException('Product code already exists');
+      }
     }
 
-    updateProductDto.imageUrl = result.secure_url;
+    // 3. Si viene imagen → subir a Cloudinary
+    if (file) {
+      const result = await this.cloudinaryService.uploadImage(file);
+
+      // eliminar imagen anterior
+      if (product.imageUrl) {
+        await this.cloudinaryService.deleteImage(product.imageUrl);
+      }
+
+      updateProductDto.imageUrl = result.secure_url;
+    }
+
+    // 4. PATCH real
+    this.productRepository.merge(product, updateProductDto);
+
+    // 5. Guardar
+    return await this.productRepository.save(product);
   }
-
-  // 4. PATCH real
-  this.productRepository.merge(product, updateProductDto);
-
-  // 5. Guardar
-  return await this.productRepository.save(product);
-}
 
   async toggleActive(id: number): Promise<Product> {
     const product = await this.findOne(id);
@@ -217,31 +217,64 @@ export class ProductsService {
     });
   }
   async findGroupedByCategory(): Promise<any> {
-  const categories = await this.categoryRepository.find({
-    relations: ['products'],
-    order: { order: 'ASC' },
-  });
+    const categories = await this.categoryRepository.find({
+      relations: ['products'],
+      order: { order: 'ASC' },
+    });
 
-  return categories.map((category) => ({
-    idCategory: category.idCategory,
-    name: category.name,
-    description: category.description,
-    imageUrl: category.imageUrl,
-    order: category.order,
-    productCount: category.products.length, // cuenta TODOS
-    products: category.products.map((p) => ({
-      idProduct: p.idProduct,
-      code: p.code,
-      name: p.name,
-      description: p.description,
-      price: p.price,
-      imageUrl: p.imageUrl,
-      isActive: p.isActive,
-      createdAt: p.createdAt,
-      updatedAt: p.updatedAt,
-    })),
-  }));
-}
+    return categories.map((category) => ({
+      idCategory: category.idCategory,
+      name: category.name,
+      description: category.description,
+      imageUrl: category.imageUrl,
+      order: category.order,
+      productCount: category.products.length, // cuenta TODOS
+      products: category.products.map((p) => ({
+        idProduct: p.idProduct,
+        code: p.code,
+        name: p.name,
+        description: p.description,
+        price: p.price,
+        imageUrl: p.imageUrl,
+        isActive: p.isActive,
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt,
+      })),
+    }));
+  }
+
+  async findActiveGroupedByCategory(): Promise<any> {
+    const categories = await this.categoryRepository
+      .createQueryBuilder('category')
+      .leftJoinAndSelect(
+        'category.products',
+        'product',
+        'product.isActive = :isActive',
+        { isActive: true },
+      )
+      .orderBy('category.order', 'ASC')
+      .getMany();
+
+    return categories.map((category) => ({
+      idCategory: category.idCategory,
+      name: category.name,
+      description: category.description,
+      imageUrl: category.imageUrl,
+      order: category.order,
+      productCount: category.products.length,
+      products: category.products.map((p) => ({
+        idProduct: p.idProduct,
+        code: p.code,
+        name: p.name,
+        description: p.description,
+        price: p.price,
+        imageUrl: p.imageUrl,
+        isActive: p.isActive,
+        createdAt: p.createdAt,
+        updatedAt: p.updatedAt,
+      })),
+    }));
+  }
 
 
   // Seed de productos por defecto con categorías

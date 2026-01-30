@@ -111,7 +111,7 @@ export class CashierSessionsService {
     const totalDifference = cashDifference + qrDifference;
 
     // Actualizar sesión
-    session.closingDate = new Date();
+    session.closingDate = closeSessionDto.closingDate;
     session.closingCashAmount = closeSessionDto.closingCashAmount;
     session.closingQrAmount = closeSessionDto.closingQrAmount;
     session.difference = totalDifference;

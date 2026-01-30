@@ -71,6 +71,12 @@ export class ProductsController {
     return this.productsService.findGroupedByCategory();
   }
 
+  @Get('grouped-by-category/active')
+  @Roles('ADMIN', 'CASHIER', 'KITCHEN')
+  findActiveGroupedByCategory() {
+    return this.productsService.findActiveGroupedByCategory();
+  }
+
   // ENDPOINT 2: Productos con información de categoría (Método 1)
   @Get('with-category')
   @Roles('ADMIN', 'CASHIER', 'KITCHEN')

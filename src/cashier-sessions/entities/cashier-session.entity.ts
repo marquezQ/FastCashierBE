@@ -16,7 +16,7 @@ export class CashierSession {
   @Column({ name: 'user_id', type: 'int' })
   userId: number;
 
-  @CreateDateColumn({ name: 'opening_date' })
+  @Column({ name: 'opening_date', type: 'timestamp' })
   openingDate: Date;
 
   @Column({ name: 'closing_date', type: 'timestamp', nullable: true })
