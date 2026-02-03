@@ -18,6 +18,7 @@ import {
   CreateCashierSessionDto,
   CloseCashierSessionDto,
   UpdateCashierSessionDto,
+  SessionStatisticsDto,
 } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -87,6 +88,24 @@ export class CashierSessionsController {
   @ApiResponse({ status: 200, description: 'Return the session summary.' })
   getSessionSummary(@Param('id', ParseIntPipe) id: number) {
     return this.cashierSessionsService.getSessionSummary(id);
+  }
+
+  @Get(':id/statistics')
+  @Roles('ADMIN', 'CASHIER') //Solo ADMIN y CASHIER
+  @ApiOperation({
+    summary: 'Get comprehensive statistics for a cashier session',
+    description:
+      'Returns detailed statistics including expected cash/QR amounts, total orders, initial amount, opening date, responsible person, and average order value. Works for both open and closed sessions.',
+  })
+  @ApiParam({ name: 'id', description: 'ID of the session' })
+  @ApiResponse({
+    status: 200,
+    description: 'Return comprehensive session statistics.',
+    type: SessionStatisticsDto,
+  })
+  @ApiResponse({ status: 404, description: 'Session not found.' })
+  getSessionStatistics(@Param('id', ParseIntPipe) id: number) {
+    return this.cashierSessionsService.getSessionStatistics(id);
   }
 
   @Patch(':id')

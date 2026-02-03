@@ -6,11 +6,14 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { Order } from '../orders/entities/order.entity';
 import { CashierSession } from './entities/cashier-session.entity';
 import {
   CreateCashierSessionDto,
   CloseCashierSessionDto,
   UpdateCashierSessionDto,
+  SessionStatisticsDto,
+  ResponsiblePersonDto,
 } from './dto';
 
 @Injectable()
@@ -18,7 +21,9 @@ export class CashierSessionsService {
   constructor(
     @InjectRepository(CashierSession)
     private readonly sessionRepository: Repository<CashierSession>,
-  ) {}
+    @InjectRepository(Order)
+    private readonly orderRepository: Repository<Order>,
+  ) { }
 
   async create(
     createSessionDto: CreateCashierSessionDto,
@@ -183,6 +188,69 @@ export class CashierSessionsService {
         status: session.status,
       },
     };
+  }
+
+  async getSessionStatistics(id: number): Promise<SessionStatisticsDto> {
+    const session = await this.sessionRepository.findOne({
+      where: { idSession: id },
+      relations: ['user', 'user.role'],
+    });
+
+    if (!session) {
+      throw new NotFoundException(`Cashier session with ID ${id} not found`);
+    }
+
+    // Count orders by payment method
+    const cashOrderCount = await this.orderRepository.count({
+      where: {
+        sessionId: id,
+        paymentMethod: 'CASH',
+      },
+    });
+
+    const qrOrderCount = await this.orderRepository.count({
+      where: {
+        sessionId: id,
+        paymentMethod: 'QR',
+      },
+    });
+
+    // Calculate expected amounts
+    const expectedCash = Number(session.initialAmount) + Number(session.totalCash);
+    const expectedQr = Number(session.totalQr);
+
+    // Calculate average order value (handle division by zero)
+    const averageOrderValue =
+      session.orderCount > 0
+        ? Number(session.totalSales) / session.orderCount
+        : 0;
+
+    // Build responsible person information
+    const responsiblePerson: ResponsiblePersonDto = {
+      userId: session.user.idUser,
+      name: session.user.fullName,
+      email: session.user.email,
+      role: session.user.role?.roleName || 'N/A',
+    };
+
+    // Build and return statistics
+    const statistics: SessionStatisticsDto = {
+      sessionId: session.idSession,
+      expectedCash: Number(expectedCash.toFixed(2)),
+      expectedQr: Number(expectedQr.toFixed(2)),
+      totalOrders: session.orderCount,
+      cashOrderCount,
+      qrOrderCount,
+      initialAmount: Number(session.initialAmount),
+      openingDate: session.openingDate,
+      responsiblePerson,
+      averageOrderValue: Number(averageOrderValue.toFixed(2)),
+      totalSales: Number(session.totalSales),
+      status: session.status,
+      closingDate: session.closingDate || undefined,
+    };
+
+    return statistics;
   }
 
   async remove(id: number): Promise<void> {

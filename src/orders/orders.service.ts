@@ -66,6 +66,7 @@ export class OrdersService {
       changeAmount,
       customer: createOrderDto.customer,
       observations: createOrderDto.observations,
+      orderType: createOrderDto.orderType,
       orderStatus: 'PENDING',
     });
 

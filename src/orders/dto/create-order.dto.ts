@@ -44,6 +44,18 @@ export class CreateOrderDto {
   paymentMethod: string;
 
   @ApiProperty({
+    description: 'Tipo de orden: Para mesa (DINE_IN) o Para llevar (TAKEOUT)',
+    example: 'DINE_IN',
+    enum: ['DINE_IN', 'TAKEOUT'],
+  })
+  @IsString()
+  @IsNotEmpty()
+  @IsIn(['DINE_IN', 'TAKEOUT'], {
+    message: 'Order type must be DINE_IN or TAKEOUT',
+  })
+  orderType: string;
+
+  @ApiProperty({
     description: 'Monto pagado por el cliente',
     example: 100.00,
   })

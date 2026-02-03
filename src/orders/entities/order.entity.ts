@@ -42,6 +42,14 @@ export class Order {
   paymentMethod: string;
 
   @Column({
+    name: 'order_type',
+    type: 'varchar',
+    length: 20,
+    default: 'DINE_IN',
+  })
+  orderType: string;
+
+  @Column({
     name: 'amount_paid',
     type: 'decimal',
     precision: 10,
