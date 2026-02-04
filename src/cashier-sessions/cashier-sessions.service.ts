@@ -5,7 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Not } from 'typeorm';
 import { Order } from '../orders/entities/order.entity';
 import { CashierSession } from './entities/cashier-session.entity';
 import {
@@ -200,11 +200,12 @@ export class CashierSessionsService {
       throw new NotFoundException(`Cashier session with ID ${id} not found`);
     }
 
-    // Count orders by payment method
+    // Count orders by payment method (excluding CANCELLED)
     const cashOrderCount = await this.orderRepository.count({
       where: {
         sessionId: id,
         paymentMethod: 'CASH',
+        orderStatus: Not('CANCELLED'),
       },
     });
 
@@ -212,6 +213,7 @@ export class CashierSessionsService {
       where: {
         sessionId: id,
         paymentMethod: 'QR',
+        orderStatus: Not('CANCELLED'),
       },
     });
 
@@ -290,6 +292,31 @@ export class CashierSessionsService {
 
     session.totalSales = Number(session.totalSales) + Number(orderTotal);
     session.orderCount += 1;
+
+    await this.sessionRepository.save(session);
+  }
+
+  async deductOrderFromSession(
+    sessionId: number,
+    orderTotal: number,
+    paymentMethod: 'CASH' | 'QR',
+  ): Promise<void> {
+    const session = await this.findOne(sessionId);
+
+    if (session.status === 'CLOSED') {
+      throw new BadRequestException(
+        'Cannot deduct orders from a closed session',
+      );
+    }
+
+    if (paymentMethod === 'CASH') {
+      session.totalCash = Number(session.totalCash) - Number(orderTotal);
+    } else if (paymentMethod === 'QR') {
+      session.totalQr = Number(session.totalQr) - Number(orderTotal);
+    }
+
+    session.totalSales = Number(session.totalSales) - Number(orderTotal);
+    session.orderCount -= 1;
 
     await this.sessionRepository.save(session);
   }

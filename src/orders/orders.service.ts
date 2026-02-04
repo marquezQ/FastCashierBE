@@ -19,7 +19,7 @@ export class OrdersService {
     private readonly cashierSessionsService: CashierSessionsService,
     private readonly orderDetailsService: OrderDetailsService,
     private readonly productsService: ProductsService,
-  ) {}
+  ) { }
 
   async create(createOrderDto: CreateOrderDto): Promise<Order> {
     // Verificar que la sesión exista y esté abierta
@@ -226,6 +226,13 @@ export class OrdersService {
     if (order.orderStatus === 'CANCELLED') {
       throw new BadRequestException('Order is already cancelled');
     }
+
+    // Restar de la sesión de caja
+    await this.cashierSessionsService.deductOrderFromSession(
+      order.sessionId,
+      order.total,
+      order.paymentMethod as 'CASH' | 'QR',
+    );
 
     order.orderStatus = 'CANCELLED';
     if (reason) {
