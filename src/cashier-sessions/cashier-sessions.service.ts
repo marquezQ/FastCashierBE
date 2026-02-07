@@ -106,20 +106,15 @@ export class CashierSessionsService {
       throw new BadRequestException('Session is already closed');
     }
 
-    // Calcular diferencia
-    const expectedCashTotal = session.initialAmount + session.totalCash;
-    const expectedQrTotal = session.totalQr;
-
-    const cashDifference =
-      closeSessionDto.closingCashAmount - expectedCashTotal;
-    const qrDifference = closeSessionDto.closingQrAmount - expectedQrTotal;
-    const totalDifference = cashDifference + qrDifference;
+    // Calcular diferencia (solo sobre efectivo)
+    const expectedCashTotal = Number(session.initialAmount) + Number(session.totalCash);
+    const cashDifference = closeSessionDto.closingCashAmount - expectedCashTotal;
 
     // Actualizar sesión
     session.closingDate = closeSessionDto.closingDate;
     session.closingCashAmount = closeSessionDto.closingCashAmount;
     session.closingQrAmount = closeSessionDto.closingQrAmount;
-    session.difference = totalDifference;
+    session.difference = cashDifference;
     session.status = 'CLOSED';
 
     if (closeSessionDto.observations) {

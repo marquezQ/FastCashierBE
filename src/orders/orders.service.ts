@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
+import { Repository, Between, In, MoreThanOrEqual } from 'typeorm';
 import { Order } from './entities/order.entity';
 import { CreateOrderDto, UpdateOrderDto, UpdateOrderStatusDto } from './dto';
 import { CashierSessionsService } from '../cashier-sessions/cashier-sessions.service';
@@ -145,6 +145,38 @@ export class OrdersService {
       where: [{ orderStatus: 'PENDING' }, { orderStatus: 'IN_PREPARATION' }],
       relations: ['session', 'cashier', 'cook', 'details', 'details.product'],
       order: { orderDate: 'ASC' },
+    });
+  }
+
+  async getKitchenDisplayOrders(): Promise<Order[]> {
+    const eighteenHoursAgo = new Date();
+    eighteenHoursAgo.setHours(eighteenHoursAgo.getHours() - 18);
+
+    return await this.orderRepository.find({
+      where: {
+        orderStatus: In(['PENDING', 'IN_PREPARATION', 'READY']),
+        orderDate: MoreThanOrEqual(eighteenHoursAgo),
+      },
+      relations: ['session', 'cashier', 'cook', 'details', 'details.product'],
+      order: {
+        orderDate: 'ASC', // FIFO logic
+      },
+    });
+  }
+
+  async getKitchenHistoryOrders(): Promise<Order[]> {
+    const eighteenHoursAgo = new Date();
+    eighteenHoursAgo.setHours(eighteenHoursAgo.getHours() - 18);
+
+    return await this.orderRepository.find({
+      where: {
+        orderStatus: In(['DELIVERED', 'CANCELLED']),
+        orderDate: MoreThanOrEqual(eighteenHoursAgo),
+      },
+      relations: ['session', 'cashier', 'cook', 'details', 'details.product'],
+      order: {
+        orderDate: 'DESC', // LIFO logic - Most recent first
+      },
     });
   }
 
