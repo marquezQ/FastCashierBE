@@ -5,7 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Not } from 'typeorm';
+import { Repository, Not, Between, MoreThanOrEqual } from 'typeorm';
 import { Order } from '../orders/entities/order.entity';
 import { CashierSession } from './entities/cashier-session.entity';
 import {
@@ -14,6 +14,7 @@ import {
   UpdateCashierSessionDto,
   SessionStatisticsDto,
   ResponsiblePersonDto,
+  FindAllSessionsDto,
 } from './dto';
 
 @Injectable()
@@ -50,8 +51,44 @@ export class CashierSessionsService {
     return await this.sessionRepository.save(session);
   }
 
-  async findAll(): Promise<CashierSession[]> {
+  async findAll(query?: FindAllSessionsDto): Promise<CashierSession[]> {
+    const where: any = {};
+
+    // Lógica de filtrado por fecha
+    if (query?.period || query?.startDate) {
+      let startDate: Date;
+      let endDate: Date = query?.endDate ? new Date(query.endDate) : new Date();
+
+      // Ajustar fin del día para el endDate si existe
+      if (query?.endDate) {
+        endDate.setHours(23, 59, 59, 999);
+      }
+
+      if (query?.period === '7d') {
+        startDate = new Date();
+        startDate.setDate(startDate.getDate() - 7);
+        startDate.setHours(0, 0, 0, 0);
+        where.openingDate = MoreThanOrEqual(startDate);
+      } else if (query?.period === 'this-month') {
+        startDate = new Date();
+        startDate.setDate(1);
+        startDate.setHours(0, 0, 0, 0);
+        where.openingDate = Between(startDate, endDate);
+      } else if (query?.startDate) {
+        startDate = new Date(query.startDate);
+        startDate.setHours(0, 0, 0, 0);
+        where.openingDate = Between(startDate, endDate);
+      }
+    } else {
+      // Por defecto, últimos 7 días si no se pide algo específico
+      const defaultStart = new Date();
+      defaultStart.setDate(defaultStart.getDate() - 7);
+      defaultStart.setHours(0, 0, 0, 0);
+      where.openingDate = MoreThanOrEqual(defaultStart);
+    }
+
     return await this.sessionRepository.find({
+      where,
       relations: ['user'],
       order: { openingDate: 'DESC' },
     });
@@ -165,8 +202,8 @@ export class CashierSessionsService {
   async getSessionSummary(id: number) {
     const session = await this.findOne(id);
 
-    const expectedCashTotal = session.initialAmount + session.totalCash;
-    const expectedQrTotal = session.totalQr;
+    const expectedCashTotal = Number(session.initialAmount) + Number(session.totalCash);
+    const expectedQrTotal = Number(session.totalQr);
     const expectedTotal = expectedCashTotal + expectedQrTotal;
 
     return {

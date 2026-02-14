@@ -19,6 +19,7 @@ import {
   CloseCashierSessionDto,
   UpdateCashierSessionDto,
   SessionStatisticsDto,
+  FindAllSessionsDto,
 } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -44,13 +45,10 @@ export class CashierSessionsController {
 
   @Get()
   @Roles('ADMIN', 'CASHIER') //Solo ADMIN y CASHIER
-  @ApiOperation({ summary: 'Get all cashier sessions' })
-  @ApiResponse({ status: 200, description: 'Return all sessions.' })
-  findAll(@Query('status') status?: string) {
-    if (status === 'open') {
-      return this.cashierSessionsService.findOpenSessions();
-    }
-    return this.cashierSessionsService.findAll();
+  @ApiOperation({ summary: 'Get all cashier sessions with date filters' })
+  @ApiResponse({ status: 200, description: 'Return all sessions (open & closed) based on date filters.' })
+  findAll(@Query() query: FindAllSessionsDto) {
+    return this.cashierSessionsService.findAll(query);
   }
 
   @Get('user/:userId')
