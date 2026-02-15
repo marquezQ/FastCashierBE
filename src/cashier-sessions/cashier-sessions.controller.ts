@@ -11,9 +11,11 @@ import {
   HttpStatus,
   Query,
   UseGuards,
+  Res,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { CashierSessionsService } from './cashier-sessions.service';
+import { ReportsService } from '../reports/reports.service';
 import {
   CreateCashierSessionDto,
   CloseCashierSessionDto,
@@ -31,6 +33,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 export class CashierSessionsController {
   constructor(
     private readonly cashierSessionsService: CashierSessionsService,
+    private readonly reportsService: ReportsService,
   ) { }
 
   @Post()
@@ -49,6 +52,40 @@ export class CashierSessionsController {
   @ApiResponse({ status: 200, description: 'Return all sessions (open & closed) based on date filters.' })
   findAll(@Query() query: FindAllSessionsDto) {
     return this.cashierSessionsService.findAll(query);
+  }
+
+  @Get('report/pdf')
+  @Roles('ADMIN', 'CASHIER')
+  @ApiOperation({ summary: 'Generate a PDF report for cashier sessions' })
+  @ApiResponse({ status: 200, description: 'PDF report generated successfully.' })
+  async generatePdfReport(
+    @Query() query: FindAllSessionsDto,
+    @Res() res: any,
+  ) {
+    const sessions = await this.cashierSessionsService.findAll(query);
+
+    const formatDateStr = (dateStr: string) => {
+      if (!dateStr) return '';
+      const [year, month, day] = dateStr.split('-');
+      return `${day}/${month}/${year}`;
+    };
+
+    // Generar texto descriptivo del rango
+    let rangeText = 'Últimos 7 días';
+    if (query.period === 'this-month') rangeText = 'Este Mes';
+    if (query.startDate) {
+      rangeText = `Del ${formatDateStr(query.startDate)}${query.endDate ? ' al ' + formatDateStr(query.endDate) : ' hasta hoy'}`;
+    }
+
+    const buffer = await this.reportsService.generateSessionsPdf(sessions, rangeText);
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': 'inline; filename=reporte-sesiones.pdf',
+      'Content-Length': buffer.length,
+    });
+
+    res.end(buffer);
   }
 
   @Get('user/:userId')
