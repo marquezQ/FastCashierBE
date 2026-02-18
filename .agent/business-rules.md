@@ -11,10 +11,12 @@ Este archivo documenta las reglas de negocio críticas que rigen el comportamien
 - Al cerrar, se calculan las diferencias entre el monto esperado y el ingresado manualmente (`difference`).
 
 ### Arqueo Dinámico
-- Las sesiones acumulan montos por cada orden creada:
-  - `totalCash`: Suma de órdenes pagadas en efectivo.
-  - `totalQr`: Suma de órdenes pagadas vía QR.
-  - `orderCount`: Incremento por cada orden.
+### 📉 Estadísticas y Reportes
+- El sistema genera estadísticas en tiempo real:
+  - **Ticket Promedio**: `totalSales / orderCount`.
+  - **Desglose**: Conteo de órdenes por método de pago.
+  - **Integridad**: Solo se cuentan órdenes **no canceladas** para los totales de venta.
+- **Reportes PDF**: Se generan reportes descargables filtrados por fecha (7 días, mes actual o rango custom).
 
 ---
 
@@ -23,25 +25,19 @@ Este archivo documenta las reglas de negocio críticas que rigen el comportamien
 ### 1. Creación
 - Requiere una sesión de caja **OPEN**.
 - Los precios se copian de la tabla `products` a `order_details` para congelar el valor histórico.
-- Campo `orderType` ('DINE_IN' | 'TAKEOUT') es obligatorio para control de servicio.
+- Campo `orderType` ('DINE_IN' | 'TAKEOUT') es obligatorio.
+- **Cálculo de Cambio**: Si el pago es en efectivo, el sistema valida que `amountPaid >= total` y calcula `changeAmount` automáticamente.
 
 ### 2. Estados de Preparación
 - `PENDING` -> `IN_PREPARATION` -> `READY` -> `DELIVERED`.
-- Las transiciones están validadas en `OrdersService.validateStatusTransition`.
+- Las transiciones están validadas estrictamente: no se puede saltar estados ni retroceder (excepto a CANCELLED).
+- La cocina visualiza pedidos de las últimas 18 horas mediante `getKitchenDisplayOrders` (FIFO).
 
 ### 3. Cancelación e Integridad Financiera
 - Al cancelar una orden:
-  - El monto se **deduce** de los totales de la sesión (`totalSales`, `totalCash/totalQr`).
-  - El contador de órdenes disminuye.
-  - Esto garantiza que el "Efectivo esperado" al final del día sea correcto según el dinero físico presente.
-
----
-
-## 📊 Estadísticas de Sesión
-El endpoint de estadísticas calcula en tiempo real:
-- **Expected Cash**: `initialAmount + totalCash`.
-- **Average Order Value**: `totalSales / orderCount`.
-- **Breakdown**: Conteo de órdenes por método de pago excluyendo canceladas.
+  - El monto se **deduce** automáticamente de los totales de la sesión (`totalSales`, `totalCash/totalQr`).
+  - El contador de órdenes (`orderCount`) disminuye.
+  - Esto garantiza que el efectivo esperado coincida con el arqueo manual.
 
 ---
 
