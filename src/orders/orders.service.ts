@@ -6,10 +6,11 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, In, MoreThanOrEqual } from 'typeorm';
 import { Order } from './entities/order.entity';
-import { CreateOrderDto, UpdateOrderDto, UpdateOrderStatusDto } from './dto';
+import { CreateOrderDto, UpdateOrderDto, UpdateOrderStatusDto, AdminMetricsFilterDto } from './dto';
 import { CashierSessionsService } from '../cashier-sessions/cashier-sessions.service';
 import { OrderDetailsService } from '../order-details/order-details.service';
 import { ProductsService } from '../products/products.service';
+import { SelectQueryBuilder } from 'typeorm';
 
 @Injectable()
 export class OrdersService {
@@ -367,5 +368,117 @@ export class OrdersService {
       cancelledOrders,
       activeOrders: pendingOrders + inPreparationOrders + readyOrders,
     };
+  }
+
+  // --- Admin Dashboard Metrics ---
+
+  async getAdminDashboardStats(filter: AdminMetricsFilterDto) {
+    // 1. Base Query for Orders
+    const ordersQuery = this.orderRepository.createQueryBuilder('order');
+    this.applyDateFilter(ordersQuery, filter, 'order.orderDate');
+
+    // 2. Base Summary (Total Sales, Order Count, Avg Ticket)
+    const summaryQuery = ordersQuery.clone()
+      .select('SUM(order.total)', 'totalSales')
+      .addSelect('COUNT(order.idOrder)', 'orderCount')
+      .andWhere('order.orderStatus != :status', { status: 'CANCELLED' });
+
+    const summaryResult = await summaryQuery.getRawOne();
+    const totalSales = Number(summaryResult.totalSales || 0);
+    const orderCount = Number(summaryResult.orderCount || 0);
+    const averageTicket = orderCount > 0 ? totalSales / orderCount : 0;
+
+    // 3. Kitchen Performance (Avg prep time in minutes)
+    const kitchenQuery = ordersQuery.clone()
+      .select('AVG(EXTRACT(EPOCH FROM (order.completedDate - order.orderDate)) / 60)', 'avgTime')
+      .andWhere('order.completedDate IS NOT NULL')
+      .andWhere('order.orderStatus = :status', { status: 'DELIVERED' });
+
+    const kitchenResult = await kitchenQuery.getRawOne();
+    const averageKitchenTime = Number(kitchenResult.avgTime || 0);
+
+    // 4. Channel Distribution (Dine-in vs Takeout)
+    const channelQuery = ordersQuery.clone()
+      .select('order.orderType', 'type')
+      .addSelect('COUNT(order.idOrder)', 'count')
+      .andWhere('order.orderStatus != :status', { status: 'CANCELLED' })
+      .groupBy('order.orderType');
+
+    const channelResult = await channelQuery.getRawMany();
+    const channels = {
+      dineIn: Number(channelResult.find(c => c.type === 'DINE_IN')?.count || 0),
+      takeout: Number(channelResult.find(c => c.type === 'TAKEOUT')?.count || 0),
+    };
+
+    // 5. Top Products (Summing quantities)
+    const productQuery = this.orderRepository.manager.createQueryBuilder('OrderDetail', 'detail')
+      .innerJoin('detail.order', 'order')
+      .innerJoin('detail.product', 'product')
+      .select('product.name', 'name')
+      .addSelect('SUM(detail.quantity)', 'totalQuantity')
+      .where('order.orderStatus != :status', { status: 'CANCELLED' });
+
+    this.applyDateFilter(productQuery, filter, 'order.orderDate');
+
+    productQuery.groupBy('product.idProduct, product.name')
+      .orderBy('"totalQuantity"', 'DESC');
+
+    const topProducts = await productQuery.getRawMany();
+
+    return {
+      summary: {
+        totalSales: Number(totalSales.toFixed(2)),
+        orderCount,
+        averageTicket: Number(averageTicket.toFixed(2)),
+      },
+      kitchen: {
+        averageKitchenTime: Number(averageKitchenTime.toFixed(2)),
+      },
+      channels,
+      topProducts: topProducts.map(p => ({
+        name: p.name,
+        totalQuantity: Number(p.totalQuantity),
+      })),
+    };
+  }
+
+  async getCancelledOrdersReport(filter: AdminMetricsFilterDto) {
+    const query = this.orderRepository.createQueryBuilder('order')
+      .leftJoinAndSelect('order.cashier', 'cashier')
+      .where('order.orderStatus = :status', { status: 'CANCELLED' });
+
+    this.applyDateFilter(query, filter, 'order.orderDate');
+    query.orderBy('order.orderDate', 'DESC');
+
+    return await query.getMany();
+  }
+
+  private applyDateFilter(query: SelectQueryBuilder<any>, filter: AdminMetricsFilterDto, dateField: string) {
+    let startDate: Date;
+    let endDate: Date = filter.endDate ? new Date(filter.endDate) : new Date();
+
+    if (filter.endDate) {
+      endDate.setHours(23, 59, 59, 999);
+    }
+
+    if (filter.period === 'today') {
+      startDate = new Date();
+      startDate.setHours(0, 0, 0, 0);
+      query.andWhere(`${dateField} >= :startDate`, { startDate });
+    } else if (filter.period === '7d') {
+      startDate = new Date();
+      startDate.setDate(startDate.getDate() - 7);
+      startDate.setHours(0, 0, 0, 0);
+      query.andWhere(`${dateField} >= :startDate`, { startDate });
+    } else if (filter.period === 'this-month') {
+      startDate = new Date();
+      startDate.setDate(1);
+      startDate.setHours(0, 0, 0, 0);
+      query.andWhere(`${dateField} BETWEEN :startDate AND :endDate`, { startDate, endDate });
+    } else if (filter.startDate) {
+      startDate = new Date(filter.startDate);
+      startDate.setHours(0, 0, 0, 0);
+      query.andWhere(`${dateField} BETWEEN :startDate AND :endDate`, { startDate, endDate });
+    }
   }
 }

@@ -13,8 +13,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { OrdersService } from './orders.service';
-import { CreateOrderDto, UpdateOrderDto, UpdateOrderStatusDto } from './dto';
-import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
+import { CreateOrderDto, UpdateOrderDto, UpdateOrderStatusDto, AdminMetricsFilterDto } from './dto';
+import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -65,6 +65,28 @@ export class OrdersController {
   @Roles('ADMIN', 'CASHIER') // solo ADMIN y CASHIER
   getStats(@Query('sessionId') sessionId?: number) {
     return this.ordersService.getOrderStats(sessionId);
+  }
+
+  @Get('metrics/dashboard')
+  @Roles('ADMIN')
+  @ApiOperation({
+    summary: 'Get consolidated admin dashboard metrics',
+    description: 'Returns sales summary, kitchen performance, channel distribution and top products filtered by date range.'
+  })
+  @ApiResponse({ status: 200, description: 'Return metrics successfully.' })
+  getDashboardMetrics(@Query() filter: AdminMetricsFilterDto) {
+    return this.ordersService.getAdminDashboardStats(filter);
+  }
+
+  @Get('metrics/cancellations')
+  @Roles('ADMIN')
+  @ApiOperation({
+    summary: 'Get cancelled orders report for audit',
+    description: 'Returns detailed list of cancelled orders filtered by date range.'
+  })
+  @ApiResponse({ status: 200, description: 'Return cancellations audit report.' })
+  getCancellationsReport(@Query() filter: AdminMetricsFilterDto) {
+    return this.ordersService.getCancelledOrdersReport(filter);
   }
 
   @Get('session/:sessionId')
