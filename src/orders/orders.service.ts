@@ -52,8 +52,8 @@ export class OrdersService {
       }
     }
 
-    // Generar número de pedido único
-    const orderNumber = await this.generateOrderNumber();
+    // Generar número de pedido único basado en la sesión
+    const orderNumber = await this.generateOrderNumber(createOrderDto.sessionId);
 
     // Crear orden
     const order = this.orderRepository.create({
@@ -287,24 +287,19 @@ export class OrdersService {
 
   // Métodos auxiliares
 
-  private async generateOrderNumber(): Promise<string> {
-    const today = new Date();
-    const year = today.getFullYear().toString().slice(-2);
-    const month = (today.getMonth() + 1).toString().padStart(2, '0');
-    const day = today.getDate().toString().padStart(2, '0');
-
-    // Contar órdenes del día
-    const startOfDay = new Date(today.setHours(0, 0, 0, 0));
-    const endOfDay = new Date(today.setHours(23, 59, 59, 999));
-
+  private async generateOrderNumber(sessionId: number): Promise<string> {
+    // Contar órdenes de la sesión actual
     const count = await this.orderRepository.count({
       where: {
-        orderDate: Between(startOfDay, endOfDay),
+        sessionId: sessionId,
       },
     });
 
     const sequential = (count + 1).toString().padStart(4, '0');
-    return `ORD-${year}${month}${day}-${sequential}`;
+
+    // El formato incluye el ID de sesión para garantizar unicidad histórica
+    // Ejemplo: ORD-50-0001 (Orden 1 de la sesión 50)
+    return `ORD-S${sessionId}-${sequential}`;
   }
 
   private validateStatusTransition(
@@ -415,12 +410,13 @@ export class OrdersService {
       .innerJoin('detail.order', 'order')
       .innerJoin('detail.product', 'product')
       .select('product.name', 'name')
+      .addSelect('product.imageUrl', 'imageUrl')
       .addSelect('SUM(detail.quantity)', 'totalQuantity')
       .where('order.orderStatus != :status', { status: 'CANCELLED' });
 
     this.applyDateFilter(productQuery, filter, 'order.orderDate');
 
-    productQuery.groupBy('product.idProduct, product.name')
+    productQuery.groupBy('product.idProduct, product.name, product.imageUrl')
       .orderBy('"totalQuantity"', 'DESC');
 
     const topProducts = await productQuery.getRawMany();
@@ -437,6 +433,7 @@ export class OrdersService {
       channels,
       topProducts: topProducts.map(p => ({
         name: p.name,
+        imageUrl: p.imageUrl,
         totalQuantity: Number(p.totalQuantity),
       })),
     };
@@ -445,6 +442,8 @@ export class OrdersService {
   async getCancelledOrdersReport(filter: AdminMetricsFilterDto) {
     const query = this.orderRepository.createQueryBuilder('order')
       .leftJoinAndSelect('order.cashier', 'cashier')
+      .leftJoinAndSelect('order.details', 'details')
+      .leftJoinAndSelect('details.product', 'product')
       .where('order.orderStatus = :status', { status: 'CANCELLED' });
 
     this.applyDateFilter(query, filter, 'order.orderDate');

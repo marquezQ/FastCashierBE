@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+process.env.TZ = 'America/La_Paz';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
