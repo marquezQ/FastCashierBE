@@ -1,6 +1,6 @@
 # 📊 Database & Entities
 
-El sistema utiliza **TypeORM** con un enfoque relacional. Todas las entidades se encuentran en `src/**/entities/*.entity.ts`.
+El sistema utiliza **TypeORM** con PostgreSQL. Todas las entidades se encuentran en `src/**/entities/*.entity.ts` con naming strategy `snake_case` en BD y `camelCase` en TypeScript.
 
 ---
 
@@ -8,47 +8,161 @@ El sistema utiliza **TypeORM** con un enfoque relacional. Todas las entidades se
 
 ```mermaid
 erDiagram
-    ROLES ||--o{ USERS : "1:N"
-    USERS ||--o{ CASHIER_SESSIONS : "1:N"
-    USERS ||--o{ ORDERS : "cashier 1:N"
-    USERS ||--o{ ORDERS : "cook 1:N"
-    CATEGORIES ||--o{ PRODUCTS : "1:N"
-    PRODUCTS ||--o{ ORDER_DETAILS : "1:N"
-    CASHIER_SESSIONS ||--o{ ORDERS : "1:N"
-    ORDERS ||--|{ ORDER_DETAILS : "1:N"
+    ROLES ||--o{ USERS : "1:N (roleId)"
+    USERS ||--o{ CASHIER_SESSIONS : "1:N (userId)"
+    USERS ||--o{ ORDERS : "cashier 1:N (cashierId)"
+    USERS ||--o{ ORDERS : "cook 1:N (cookId)"
+    USERS ||--o{ USERS : "auto-ref (createdBy)"
+    CATEGORIES ||--o{ PRODUCTS : "1:N (idCategory)"
+    PRODUCTS ||--o{ ORDER_DETAILS : "1:N (productId)"
+    CASHIER_SESSIONS ||--o{ ORDERS : "1:N (sessionId)"
+    ORDERS ||--|{ ORDER_DETAILS : "1:N (orderId, CASCADE)"
 ```
 
 ---
 
 ## 🗂 Detalle de Entidades
 
-### 👤 Usuarios & Roles
-- **Role** (`roles`): ADMIN, CASHIER, KITCHEN. Define permisos.
-- **User** (`users`): Datos de acceso, relación con rol y soft-delete (`is_active`).
+### 👤 `roles` — Tabla de Roles
+| Columna | Tipo | Detalles |
+| :--- | :--- | :--- |
+| `id_role` | PK int | Auto-generado |
+| `role_name` | varchar(50) | Único: `ADMIN`, `CASHIER`, `KITCHEN` |
 
-### 📦 Catálogo
-- **Category** (`categories`): Clasificación de productos. Soporta soft-delete.
-- **Product** (`products`): Información de precios, stock y URL de imagen (Cloudinary).
+**Relaciones:** `1:N → users`
 
-### 💰 Finanzas (Sesiones)
-- **CashierSession** (`cashier_sessions`): Control de apertura/cierre de caja. 
-  - Almacena montos iniciales, acumulados por venta y finales reales.
-  - Campos clave: `total_cash`, `total_qr`, `initial_amount`, `order_count`.
-  - Cierre: `closing_cash_amount`, `closing_qr_amount`, `difference`, `observations`.
+---
 
-### 🧾 Órdenes (Ventas)
-- **Order** (`orders`): Cabecera de la venta.
-  - `order_type`: 'DINE_IN' or 'TAKEOUT'.
-  - `payment_method`: 'CASH' or 'QR'.
-  - `amount_paid`, `change_amount`: Gestión de pagos en efectivo.
-  - `customer`, `observations`: Información adicional del cliente y pedido.
-  - Relación con sesión, cajero y cocinero (`cook_id`).
-- **OrderDetail** (`order_details`): Items individuales vendidos.
-  - Almacena precio unitario histórico para evitar cambios por actualización de producto.
+### 👤 `users` — Usuarios del Sistema
+| Columna | Tipo | Detalles |
+| :--- | :--- | :--- |
+| `id_user` | PK int | Auto-generado |
+| `full_name` | varchar(100) | Nombre completo |
+| `password_hash` | varchar(255) | BCrypt hash (`select: false` — nunca se devuelve en queries) |
+| `email` | varchar(100) | Único, usado para login |
+| `phone` | varchar(20) | Opcional |
+| `role_id` | FK int | Referencia a `roles` |
+| `is_active` | boolean | Soft-delete. `false` = acceso bloqueado |
+| `created_at` | timestamp | Auto-generado |
+| `last_access` | timestamp | Actualizado en cada login exitoso |
+| `created_by` | FK int | Auto-referencia a `users` (quién lo creó) |
+
+**Relaciones:** `N:1 → roles`, auto-referencia a `users`
+
+---
+
+### 🏷️ `categories` — Categorías de Productos
+| Columna | Tipo | Detalles |
+| :--- | :--- | :--- |
+| `id_category` | PK int | Auto-generado |
+| `name` | varchar(100) | Único. Seed: `COMIDA`, `REFRESCOS`, `BEBIDAS CALIENTES`, `POSTRES` |
+| `description` | text | Opcional |
+| `image_url` | varchar(255) | URL de Cloudinary, opcional |
+| `order` | int | Para ordenamiento visual en la UI (0 = primero) |
+| `is_active` | boolean | Soft-delete |
+| `created_at` | timestamp | Auto-generado |
+
+**Índices:** `name` (unique), `order`, `is_active`  
+**Relaciones:** `1:N → products`
+
+---
+
+### 📦 `products` — Catálogo de Productos
+| Columna | Tipo | Detalles |
+| :--- | :--- | :--- |
+| `id_product` | PK int | Auto-generado |
+| `code` | varchar(50) | Único. Formato: `PROD-001` |
+| `name` | varchar(150) | Nombre del producto |
+| `description` | text | Opcional |
+| `price` | decimal(10,2) | Precio actual de venta |
+| `id_category` | FK int | Referencia a `categories` |
+| `image_url` | varchar(255) | URL almacenada en Cloudinary |
+| `is_active` | boolean | Soft-delete (`toggleActive`) |
+| `created_at` | timestamp | Auto-generado |
+| `updated_at` | timestamp | Auto-actualizado |
+
+**Índices:** Compuesto `(id_category, is_active)` para optimizar queries de productos activos por categoría.  
+**Relaciones:** `N:1 → categories`, `1:N → order_details`
+
+> [!NOTE]
+> No se elimina físicamente un producto con historial de ventas. En su lugar se usa `isActive = false`.
+
+---
+
+### 💰 `cashier_sessions` — Sesiones de Caja
+| Columna | Tipo | Detalles |
+| :--- | :--- | :--- |
+| `id_session` | PK int | Auto-generado |
+| `user_id` | FK int | Cajero responsable |
+| `opening_date` | timestamp | Fecha/hora de apertura |
+| `closing_date` | timestamp | Nullable, se llena al cerrar |
+| `initial_amount` | decimal(10,2) | Monto inicial en caja al abrir |
+| `total_cash` | decimal(10,2) | Efectivo acumulado por ventas (default: 0) |
+| `total_qr` | decimal(10,2) | QR acumulado por ventas (default: 0) |
+| `closing_cash_amount` | decimal(10,2) | Efectivo real contado al cierre |
+| `closing_qr_amount` | decimal(10,2) | QR real al cierre |
+| `total_sales` | decimal(10,2) | Total ventas (cash + qr), excluye canceladas |
+| `order_count` | int | Conteo de órdenes activas (se decrementa al cancelar) |
+| `difference` | decimal(10,2) | `closingCashAmount - (initialAmount + totalCash)` |
+| `observations` | text | Notas del cajero al cierre |
+| `status` | varchar(20) | `OPEN` \| `CLOSED` (default: `OPEN`) |
+
+**Relaciones:** `N:1 → users`, `1:N → orders`
+
+---
+
+### 🧾 `orders` — Órdenes / Ventas
+| Columna | Tipo | Detalles |
+| :--- | :--- | :--- |
+| `id_order` | PK int | Auto-generado |
+| `order_number` | varchar(20) | Único. Formato: `ORD-S{sessionId}-{0001}` |
+| `session_id` | FK int | Sesión de caja activa al momento de la venta |
+| `cashier_id` | FK int | Usuario cajero que registró la orden |
+| `cook_id` | FK int | Nullable. Se asigna al pasar a `IN_PREPARATION` |
+| `order_date` | timestamp | Auto-generado en creación |
+| `subtotal` | decimal(10,2) | Suma de `quantity * unitPrice` de los items |
+| `total` | decimal(10,2) | Total a cobrar (actualmente = subtotal; extensible para impuestos) |
+| `payment_method` | varchar(20) | `CASH` \| `QR` |
+| `order_type` | varchar(20) | `DINE_IN` \| `TAKEOUT` (default: `DINE_IN`) |
+| `amount_paid` | decimal(10,2) | Monto entregado por el cliente (solo CASH) |
+| `change_amount` | decimal(10,2) | Vuelto = `amountPaid - total` |
+| `order_status` | varchar(20) | `PENDING` → `IN_PREPARATION` → `READY` → `DELIVERED` \| `CANCELLED` |
+| `preparation_start_date` | timestamp | Se fija al transitar a `IN_PREPARATION` |
+| `completed_date` | timestamp | Se fija al transitar a `READY` o `DELIVERED` |
+| `customer` | varchar(100) | Nombre del cliente (opcional) |
+| `observations` | text | Notas adicionales / razón de cancelación |
+| `updated_at` | timestamp | Auto-actualizado |
+
+**Relaciones:** `N:1 → cashier_sessions`, `N:1 → users (cashier)`, `N:1 → users (cook)`, `1:N → order_details (eager, cascade)`
+
+---
+
+### 📋 `order_details` — Ítems de una Orden
+| Columna | Tipo | Detalles |
+| :--- | :--- | :--- |
+| `id_detail` | PK int | Auto-generado |
+| `order_id` | FK int | Referencia a `orders` (onDelete: CASCADE) |
+| `product_id` | FK int | Referencia al producto |
+| `quantity` | int | Cantidad vendida (default: 1) |
+| `unit_price` | decimal(10,2) | **Precio congelado al momento de la venta** (no cambia si el producto se actualiza) |
+| `subtotal` | decimal(10,2) | `quantity * unit_price` |
+
+**Relaciones:** `N:1 → orders`, `N:1 → products`
+
+> [!IMPORTANT]
+> `unit_price` es el precio histórico de venta. Esto garantiza integridad financiera: si el precio del producto cambia, las órdenes pasadas no se ven afectadas.
 
 ---
 
 ## 🛠 Convenciones TypeORM
-- **Naming Strategy**: Uso de `snake_case` para nombres de columnas en BD y `camelCase` para propiedades en TypeScript.
-- **Soft Delete**: Implementado mediante la columna `is_active: boolean` en entidades maestras.
-- **Relaciones**: Uso extensivo de `@ManyToOne` y `@OneToMany` con carga perezosa (lazy) o ansiosa (eager) según el caso.
+
+- **Naming**: BD usa `snake_case`, TypeScript usa `camelCase` mapeados con `{ name: 'column_name' }`
+- **Soft Delete**: Campo `isActive: boolean` en `users`, `categories` y `products`. No se eliminan físicamente.
+- **Cascade**: `OrderDetail` usa `onDelete: CASCADE` — al borrar una orden, sus detalles se borran también.
+- **Eager Loading**: `Order.details` carga con `eager: true` — siempre devueltos junto con la orden.
+- **synchronize**: Activado sólo en `NODE_ENV=development`. **Desactivar en producción.**
+- **Índices**: Aplicados estratégicamente en `products` (`idCategory + isActive`) y `categories` (`name`, `order`, `isActive`) para optimizar queries frecuentes.
+
+---
+
+**Versión:** 2.0 | **Actualizado:** 2026-03-01
