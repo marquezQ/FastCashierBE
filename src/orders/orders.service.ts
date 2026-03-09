@@ -11,6 +11,7 @@ import { CashierSessionsService } from '../cashier-sessions/cashier-sessions.ser
 import { OrderDetailsService } from '../order-details/order-details.service';
 import { ProductsService } from '../products/products.service';
 import { SelectQueryBuilder } from 'typeorm';
+import { OrdersGateway } from './orders.gateway';
 
 @Injectable()
 export class OrdersService {
@@ -20,6 +21,7 @@ export class OrdersService {
     private readonly cashierSessionsService: CashierSessionsService,
     private readonly orderDetailsService: OrderDetailsService,
     private readonly productsService: ProductsService,
+    private readonly ordersGateway: OrdersGateway,
   ) { }
 
   async create(createOrderDto: CreateOrderDto): Promise<Order> {
@@ -88,8 +90,12 @@ export class OrdersService {
       createOrderDto.paymentMethod as 'CASH' | 'QR',
     );
 
-    // Retornar orden con detalles
-    return await this.findOne(savedOrder.idOrder);
+    // Retornar orden con detalles completos (relations cargadas)
+    const completedOrder = await this.findOne(savedOrder.idOrder);
+
+    this.ordersGateway.emitNewOrder(completedOrder);
+
+    return completedOrder;
   }
 
   async findAll(): Promise<Order[]> {
@@ -229,7 +235,11 @@ export class OrdersService {
       order.observations = updateStatusDto.observations;
     }
 
-    return await this.orderRepository.save(order);
+    const updatedOrder = await this.orderRepository.save(order);
+
+    this.ordersGateway.emitOrderStatusUpdated(updatedOrder);
+
+    return updatedOrder;
   }
 
   async update(id: number, updateOrderDto: UpdateOrderDto): Promise<Order> {

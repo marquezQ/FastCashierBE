@@ -3,14 +3,18 @@ process.env.TZ = 'America/La_Paz';
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { IoAdapter } from '@nestjs/platform-socket.io';
 import { AppModule } from './app.module';
 import { RolesService } from './roles/roles.service';
 import { UsersService } from './users/users.service';
-import { CategoriesService } from './categories/categories.service'; // NUEVO
+import { CategoriesService } from './categories/categories.service';
 import { ProductsService } from './products/products.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Activa Socket.io como motor de WebSockets.
+  app.useWebSocketAdapter(new IoAdapter(app));
 
   // Validación global
   app.useGlobalPipes(
