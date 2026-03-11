@@ -282,7 +282,12 @@ export class OrdersService {
       order.observations = reason;
     }
 
-    return await this.orderRepository.save(order);
+    const updatedOrder = await this.orderRepository.save(order);
+
+    // Notificar a todos los clientes
+    this.ordersGateway.emitOrderStatusUpdated(updatedOrder);
+
+    return updatedOrder;
   }
 
   async remove(id: number): Promise<void> {
