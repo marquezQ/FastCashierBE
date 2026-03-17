@@ -57,7 +57,7 @@ export class CashierSessionsService {
     // Lógica de filtrado por fecha
     if (query?.period || query?.startDate) {
       let startDate: Date;
-      let endDate: Date = query?.endDate ? new Date(query.endDate) : new Date();
+      let endDate: Date = query?.endDate ? new Date(query.endDate + 'T00:00:00') : new Date();
 
       // Ajustar fin del día para el endDate si existe
       if (query?.endDate) {
@@ -75,7 +75,7 @@ export class CashierSessionsService {
         startDate.setHours(0, 0, 0, 0);
         where.openingDate = Between(startDate, endDate);
       } else if (query?.startDate) {
-        startDate = new Date(query.startDate);
+        startDate = new Date(query.startDate + 'T00:00:00');
         startDate.setHours(0, 0, 0, 0);
         where.openingDate = Between(startDate, endDate);
       }

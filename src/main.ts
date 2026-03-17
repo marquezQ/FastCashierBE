@@ -43,6 +43,7 @@ async function bootstrap() {
     .addTag('Products', 'Gestión de productos')
     .addTag('Orders', 'Gestión de órdenes/pedidos')
     .addTag('Cashier Sessions', 'Gestión de sesiones de caja')
+    .addTag('Reports', 'Informes y estadísticas')
     .addBearerAuth(
       {
         type: 'http',

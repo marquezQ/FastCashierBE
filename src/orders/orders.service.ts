@@ -469,7 +469,7 @@ export class OrdersService {
 
   private applyDateFilter(query: SelectQueryBuilder<any>, filter: AdminMetricsFilterDto, dateField: string) {
     let startDate: Date;
-    let endDate: Date = filter.endDate ? new Date(filter.endDate) : new Date();
+    let endDate: Date = filter.endDate ? new Date(filter.endDate + 'T00:00:00') : new Date();
 
     if (filter.endDate) {
       endDate.setHours(23, 59, 59, 999);
@@ -490,7 +490,7 @@ export class OrdersService {
       startDate.setHours(0, 0, 0, 0);
       query.andWhere(`${dateField} BETWEEN :startDate AND :endDate`, { startDate, endDate });
     } else if (filter.startDate) {
-      startDate = new Date(filter.startDate);
+      startDate = new Date(filter.startDate + 'T00:00:00');
       startDate.setHours(0, 0, 0, 0);
       query.andWhere(`${dateField} BETWEEN :startDate AND :endDate`, { startDate, endDate });
     }

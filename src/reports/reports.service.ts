@@ -1,8 +1,88 @@
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Order } from '../orders/entities/order.entity';
+
 const PDFDocument = require('pdfkit-table');
 
 @Injectable()
 export class ReportsService {
+    constructor(
+        @InjectRepository(Order)
+        private readonly orderRepository: Repository<Order>,
+    ) { }
+
+    async getSalesPerformance(start: string, end: string) {
+        // Parse as LOCAL time by appending T00:00:00 without Z if no time is given.
+        // new Date('YYYY-MM-DD') parses as UTC midnight — WRONG for La Paz.
+        // new Date('YYYY-MM-DDT00:00:00') parses as local midnight — CORRECT.
+        const startDate = start.includes('T')
+            ? new Date(start)
+            : new Date(start + 'T00:00:00');
+
+        const endDate = end.includes('T')
+            ? new Date(end)
+            : new Date(end + 'T00:00:00');
+
+        // Force end to include the full day (only when no specific time was given)
+        if (!end.includes('T')) {
+            endDate.setHours(23, 59, 59, 999);
+        }
+
+        const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        let groupBy: 'hour' | 'day' | 'week' | 'month';
+        if (diffDays < 2) {
+            groupBy = 'hour';
+        } else if (diffDays <= 14) {
+            groupBy = 'day';
+        } else if (diffDays <= 60) {
+            groupBy = 'week';
+        } else {
+            groupBy = 'month';
+        }
+
+        const orders = await this.orderRepository
+            .createQueryBuilder('order')
+            .where('order.order_date BETWEEN :start AND :end', { start: startDate, end: endDate })
+            .andWhere('order.order_status != :status', { status: 'CANCELLED' })
+            .orderBy('order.order_date', 'ASC')
+            .getMany();
+
+        const groupedData: { [key: string]: number } = {};
+
+        orders.forEach((order) => {
+            const label = this.getLabel(order.orderDate, groupBy);
+            groupedData[label] = (groupedData[label] || 0) + Number(order.total);
+        });
+
+        return Object.entries(groupedData).map(([label, sales]) => ({
+            label,
+            sales: parseFloat(sales.toFixed(2)),
+        }));
+    }
+
+    private getLabel(date: Date, groupBy: 'hour' | 'day' | 'week' | 'month'): string {
+        const d = new Date(date);
+        switch (groupBy) {
+            case 'hour':
+                return d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+            case 'day':
+                const days = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'];
+                return `${days[d.getDay()]} ${d.getDate()}`;
+            case 'week':
+                // Approximation of week of the month
+                const weekNum = Math.ceil(d.getDate() / 7);
+                return `Sem ${weekNum}`;
+            case 'month':
+                const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                return months[d.getMonth()];
+            default:
+                return '';
+        }
+    }
+
     async generateSessionsPdf(sessions: any[], rangeText: string): Promise<Buffer> {
         const doc = new PDFDocument({
             margin: 30,

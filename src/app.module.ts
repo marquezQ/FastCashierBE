@@ -9,6 +9,7 @@ import { OrdersModule } from './orders/orders.module';
 import { OrderDetailsModule } from './order-details/order-details.module';
 import { ProductsModule } from './products/products.module';
 import { CategoriesModule } from './categories/categories.module';
+import { ReportsModule } from './reports/reports.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { CategoriesModule } from './categories/categories.module';
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         synchronize: configService.get('NODE_ENV') === 'development',
         logging: configService.get('NODE_ENV') === 'development',
+        timezone: 'local', // Uses process.env.TZ (America/La_Paz) for all DB connections
       }),
     }),
 
@@ -41,6 +43,7 @@ import { CategoriesModule } from './categories/categories.module';
     OrderDetailsModule,
     ProductsModule,
     CategoriesModule,
+    ReportsModule,
   ],
 })
 export class AppModule {}
