@@ -84,29 +84,4 @@ export class RolesService {
 
     await this.roleRepository.remove(role);
   }
-
-  // Seed de roles por defecto
-  async seedDefaultRoles(): Promise<void> {
-    const defaultRoles = [
-      {
-        roleName: 'ADMIN',
-        description: 'Full system access',
-      },
-      {
-        roleName: 'CASHIER',
-        description: 'Sales and cash management',
-      },
-      {
-        roleName: 'KITCHEN',
-        description: 'Order and kitchen management',
-      },
-    ];
-
-    for (const roleData of defaultRoles) {
-      const exists = await this.findByName(roleData.roleName);
-      if (!exists) {
-        await this.create(roleData);
-      }
-    }
-  }
 }

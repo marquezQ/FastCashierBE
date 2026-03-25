@@ -37,13 +37,6 @@ export class ProductsController {
     return this.productsService.create(createProductDto, file);
   }
 
-  @Post('seed')
-  @Roles('ADMIN')
-  @HttpCode(HttpStatus.OK)
-  seed() {
-    return this.productsService.seedDefaultProducts();
-  }
-
   @Get()
   @Roles('ADMIN', 'CASHIER', 'KITCHEN')
   findAll(@Query('includeInactive') includeInactive?: string) {

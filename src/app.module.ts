@@ -1,14 +1,17 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+// Modules
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { RolesModule } from './roles/roles.module';
+import { CategoriesModule } from './categories/categories.module';
+import { ProductsModule } from './products/products.module';
 import { CashierSessionsModule } from './cashier-sessions/cashier-sessions.module';
 import { OrdersModule } from './orders/orders.module';
 import { OrderDetailsModule } from './order-details/order-details.module';
-import { ProductsModule } from './products/products.module';
-import { CategoriesModule } from './categories/categories.module';
+import { CloudinaryModule } from './cloudinary/cloudinary.module';
+import { DatabaseSeedsModule } from './database/seeds/seeds.module';
 import { ReportsModule } from './reports/reports.module';
 
 @Module({
@@ -23,27 +26,27 @@ import { ReportsModule } from './reports/reports.module';
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         type: 'postgres',
-        host: configService.get('DB_HOST'),
-        port: configService.get('DB_PORT'),
-        username: configService.get('DB_USERNAME'),
-        password: configService.get('DB_PASSWORD'),
-        database: configService.get('DB_NAME'),
-        entities: [__dirname + '/**/*.entity{.ts,.js}'],
-        synchronize: configService.get('NODE_ENV') === 'development',
-        logging: configService.get('NODE_ENV') === 'development',
-        timezone: 'local', // Uses process.env.TZ (America/La_Paz) for all DB connections
+        host: configService.get<string>('DB_HOST'),
+        port: configService.get<number>('DB_PORT'),
+        username: configService.get<string>('DB_USERNAME'),
+        password: configService.get<string>('DB_PASSWORD'),
+        database: configService.get<string>('DB_NAME'),
+        autoLoadEntities: true,
+        // synchronize: true (SOLO DESARROLLO)
+        synchronize: true, // TypeORM crea/actualiza tablas basado en tus entidades
+        dropSchema: process.env.DB_DROP_SCHEMA === 'true', // Permite resetear la BD con un comando
       }),
     }),
-
+    DatabaseSeedsModule, // Registro de seeders
     UsersModule,
     AuthModule,
     RolesModule,
+    CategoriesModule,
+    ProductsModule,
     CashierSessionsModule,
     OrdersModule,
     OrderDetailsModule,
-    ProductsModule,
-    CategoriesModule,
-    ReportsModule,
+    CloudinaryModule,
   ],
 })
-export class AppModule {}
+export class AppModule { }

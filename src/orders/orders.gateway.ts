@@ -86,8 +86,10 @@ export class OrdersGateway
      * @param order — El objeto Order completo (con details, cashier, etc.)
      */
     emitNewOrder(order: Order) {
-        this.logger.log(`📢 Emitting new_order event for order: ${order.orderNumber}`);
-        this.server.emit('new_order', order);
+        if (this.server) {
+            this.logger.log(`📢 Emitting new_order event for order: ${order.orderNumber}`);
+            this.server.emit('new_order', order);
+        }
     }
 
     /**
@@ -100,8 +102,10 @@ export class OrdersGateway
      *   socket.on('order_status_updated', (order) => { ... })
      */
     emitOrderStatusUpdated(order: Order) {
-        this.logger.log(`🔄 Emitting order_status_updated for order: ${order.orderNumber} → ${order.orderStatus}`);
-        this.server.emit('order_status_updated', order);
+        if (this.server) {
+            this.logger.log(`🔄 Emitting order_status_updated for order: ${order.orderNumber} → ${order.orderStatus}`);
+            this.server.emit('order_status_updated', order);
+        }
     }
 
     /**

@@ -123,40 +123,4 @@ export class CategoriesService {
     category.isActive = false;
     await this.categoryRepository.save(category);
   }
-
-  // Seed de categorías por defecto
-  async seedDefaultCategories(): Promise<void> {
-    const defaultCategories = [
-      {
-        name: 'COMIDA',
-        description: 'Platos de comida y menús principales',
-        order: 1,
-      },
-      {
-        name: 'REFRESCOS',
-        description: 'Bebidas frías y gaseosas',
-        order: 2,
-      },
-      {
-        name: 'BEBIDAS CALIENTES',
-        description: 'Café, té y bebidas calientes',
-        order: 3,
-      },
-      {
-        name: 'POSTRES',
-        description: 'Postres y dulces',
-        order: 4,
-      },
-    ];
-
-    for (const categoryData of defaultCategories) {
-      const exists = await this.categoryRepository.findOne({
-        where: { name: categoryData.name },
-      });
-
-      if (!exists) {
-        await this.create(categoryData);
-      }
-    }
-  }
 }

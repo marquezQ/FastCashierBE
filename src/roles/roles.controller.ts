@@ -29,13 +29,6 @@ export class RolesController {
     return this.rolesService.create(createRoleDto);
   }
 
-  @Post('seed')
-  @Roles('ADMIN') //Solo ADMIN
-  @HttpCode(HttpStatus.OK)
-  seed() {
-    return this.rolesService.seedDefaultRoles();
-  }
-
   @Get()
   @Roles('ADMIN', 'CASHIER', 'KITCHEN') //Todos pueden ver roles
   findAll() {
