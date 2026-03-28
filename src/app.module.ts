@@ -33,7 +33,7 @@ import { ReportsModule } from './reports/reports.module';
         database: configService.get<string>('DB_NAME'),
         autoLoadEntities: true,
         // synchronize: true (SOLO DESARROLLO)
-        synchronize: true, // TypeORM crea/actualiza tablas basado en tus entidades
+        synchronize: process.env.NODE_ENV !== 'production', // TypeORM no modificará tablas en producción
         dropSchema: process.env.DB_DROP_SCHEMA === 'true', // Permite resetear la BD con un comando
       }),
     }),
