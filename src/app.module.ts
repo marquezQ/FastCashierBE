@@ -35,6 +35,9 @@ import { ReportsModule } from './reports/reports.module';
         // synchronize: true (SOLO DESARROLLO)
         synchronize: process.env.NODE_ENV !== 'production', // TypeORM no modificará tablas en producción
         dropSchema: process.env.DB_DROP_SCHEMA === 'true', // Permite resetear la BD con un comando
+        extra: {
+          options: '-c timezone=America/La_Paz',
+        },
       }),
     }),
     DatabaseSeedsModule, // Registro de seeders

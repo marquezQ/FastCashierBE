@@ -310,7 +310,7 @@ export class OrdersService {
       },
     });
 
-    const sequential = (count + 1).toString().padStart(4, '0');
+    const sequential = (count + 1).toString().padStart(3, '0');
 
     // El formato incluye el ID de sesión para garantizar unicidad histórica
     // Ejemplo: ORD-50-0001 (Orden 1 de la sesión 50)
