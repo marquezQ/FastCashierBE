@@ -221,14 +221,9 @@ export class OrdersService {
       order.preparationStartDate = new Date();
     }
 
-    // Marcar como finalizado si está LISTO o ENTREGADO
-    if (
-      updateStatusDto.orderStatus === 'READY' ||
-      updateStatusDto.orderStatus === 'DELIVERED'
-    ) {
-      if (!order.completedDate) {
-        order.completedDate = new Date();
-      }
+    // Marcar como finalizado solo cuando está ENTREGADO
+    if (updateStatusDto.orderStatus === 'DELIVERED') {
+      order.completedDate = new Date();
     }
 
     if (updateStatusDto.observations) {

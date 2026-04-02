@@ -198,4 +198,171 @@ export class ReportsService {
 
         return result;
     }
+
+    async generateSingleSessionPdf(session: any, orders: Order[]): Promise<Buffer> {
+        const doc = new PDFDocument({
+            margin: 30,
+            size: 'A4',
+        });
+
+        const formatCurrency = (amount: number) => `Bs.- ${Number(amount).toFixed(2)}`;
+        const formatDate = (date: Date) => {
+            const d = new Date(date);
+            const day = d.getDate().toString().padStart(2, '0');
+            const month = (d.getMonth() + 1).toString().padStart(2, '0');
+            const year = d.getFullYear();
+            return `${day}/${month}/${year}`;
+        };
+        const formatDateTime = (date: Date) => {
+            const d = new Date(date);
+            const timeStr = d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+            return `${formatDate(d)} ${timeStr}`;
+        };
+
+        const buffer: Buffer[] = [];
+        doc.on('data', (chunk) => buffer.push(chunk));
+
+        const result = new Promise<Buffer>((resolve) => {
+            doc.on('end', () => resolve(Buffer.concat(buffer)));
+        });
+
+        // --- Header ---
+        doc.fontSize(16).font('Helvetica-Bold').text('Reporte a Detalle de Turno');
+        doc.moveDown(0.5);
+        doc.fontSize(10).font('Helvetica');
+        doc.text(`Turno ID: ${session.idSession}`);
+        doc.text(`Cajero(a): ${session.user?.fullName || 'Desconocido'}`);
+        doc.text(`Apertura: ${formatDateTime(session.openingDate)}${session.closingDate ? '  |  Cierre: ' + formatDateTime(session.closingDate) : '  |  Cierre: PENDIENTE'}`);
+        doc.text(`Fondo de Reserva (Monto Inicial): ${formatCurrency(session.initialAmount)}`);
+        doc.moveDown(2);
+
+        // --- Orders Table ---
+        let totalCashSum = 0;
+        let totalQrSum = 0;
+        let totalSalesSum = 0;
+
+        const rows = orders.map((order) => {
+            const orderTotal = Number(order.total) || 0;
+            const isCash = order.paymentMethod === 'CASH';
+            const isQr = order.paymentMethod === 'QR';
+            
+            const cashVal = isCash ? orderTotal : 0;
+            const qrVal = isQr ? orderTotal : 0;
+
+            if (order.orderStatus !== 'CANCELLED') {
+                totalCashSum += cashVal;
+                totalQrSum += qrVal;
+                totalSalesSum += orderTotal;
+            }
+
+            const tipo = order.orderType === 'DINE_IN' ? 'Mesa' : 'Llevar';
+            const cliente = order.customer || '';
+
+            return [
+                order.orderNumber,
+                formatDateTime(order.orderDate),
+                cliente,
+                tipo,
+                isCash ? formatCurrency(cashVal) : '-',
+                isQr ? formatCurrency(qrVal) : '-',
+                formatCurrency(orderTotal),
+                order.orderStatus === 'CANCELLED' ? 'Anulado' : 'OK'
+            ];
+        });
+
+        // Fila de Totales
+        rows.push([
+            'TOTAL VÁLIDO',
+            '',
+            '',
+            '',
+            formatCurrency(totalCashSum),
+            formatCurrency(totalQrSum),
+            formatCurrency(totalSalesSum),
+            ''
+        ]);
+
+        const tableData = {
+            title: 'Listado de Órdenes',
+            headers: ['# Orden', 'Fecha y Hora', 'Cliente', 'Tipo', 'Efectivo', 'QR', 'Total', 'Estado'],
+            rows: rows,
+        };
+
+        await doc.table(tableData, {
+            prepareHeader: () => doc.font('Helvetica-Bold').fontSize(9),
+            prepareRow: (row: any, indexColumn: number, indexRow: number) => {
+                if (indexRow === rows.length - 1) {
+                    doc.font('Helvetica-Bold').fontSize(9).fillColor('black');
+                } else if (row[7] === 'Anulado') {
+                    doc.font('Helvetica-Oblique').fontSize(8).fillColor('red');
+                } else {
+                    doc.font('Helvetica').fontSize(8).fillColor('black');
+                }
+            },
+        });
+
+        // Reset fill color 
+        doc.fillColor('black');
+
+        // --- Resumen General (Texto) ---
+        doc.moveDown(2);
+        
+        const initialCash = Number(session.initialAmount) || 0;
+        const expectedCashTotal = initialCash + totalCashSum;
+        const expectedQrTotal = totalQrSum;
+        const declaredCash = Number(session.closingCashAmount) || 0;
+        const declaredQr = Number(session.closingQrAmount) || 0;
+        
+        const diferenciaEfectivo = declaredCash - expectedCashTotal;
+        const diferenciaQr = declaredQr - expectedQrTotal;
+        const diferenciaTotal = diferenciaEfectivo + diferenciaQr;
+        
+        const totalGeneral = expectedCashTotal + expectedQrTotal;
+
+        const printRow = (label: string, value: string) => {
+            doc.font('Helvetica').fontSize(10).text(`${label}: ${value}`);
+        };
+
+        const statusCash = session.closingDate ? formatCurrency(declaredCash) : 'PENDIENTE';
+        const statusQr = session.closingDate ? formatCurrency(declaredQr) : 'PENDIENTE';
+        const diffText = session.closingDate ? formatCurrency(diferenciaTotal) : 'PENDIENTE';
+
+        doc.font('Helvetica-Bold').fontSize(11).text('CAJA Y EFECTIVO');
+        doc.moveDown(0.2);
+        printRow('Efectivo Inicial', formatCurrency(initialCash));
+        printRow('Ventas Efectivo', formatCurrency(totalCashSum));
+        printRow('Efectivo Esperado', formatCurrency(expectedCashTotal));
+        printRow('Efectivo (Físico Caja)', statusCash);
+        doc.moveDown(1);
+
+        doc.font('Helvetica-Bold').fontSize(11).text('TRANSACCIONES (QR)');
+        doc.moveDown(0.2);
+        printRow('Ventas QR Esperado', formatCurrency(expectedQrTotal));
+        printRow('Ventas QR Declarado', statusQr);
+        doc.moveDown(1);
+
+        doc.font('Helvetica-Bold').fontSize(11).text(`TOTAL GENERAL: ${formatCurrency(totalGeneral)}`);
+        doc.moveDown(1);
+
+        doc.font('Helvetica-Bold').fontSize(11).text('SOBRANTE / FALTANTE TOTAL');
+        doc.moveDown(0.2);
+        doc.font('Helvetica').fontSize(11).text(diffText);
+        doc.moveDown(2);
+
+        // Footer with page numbers
+        const range = doc.bufferedPageRange();
+        for (let i = range.start; i < range.start + range.count; i++) {
+            doc.switchToPage(i);
+            doc.fontSize(8).text(
+                `Página ${i + 1} de ${range.count} - Generado el ${new Date().toLocaleString()}`,
+                30,
+                doc.page.height - 40,
+                { align: 'center' },
+            );
+        }
+
+        doc.end();
+
+        return result;
+    }
 }

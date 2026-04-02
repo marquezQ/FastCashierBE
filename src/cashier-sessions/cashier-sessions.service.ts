@@ -352,4 +352,12 @@ export class CashierSessionsService {
 
     await this.sessionRepository.save(session);
   }
+
+  async getSessionOrders(sessionId: number): Promise<Order[]> {
+    return await this.orderRepository.find({
+      where: { sessionId },
+      order: { orderDate: 'ASC' },
+      relations: ['details', 'details.product'],
+    });
+  }
 }

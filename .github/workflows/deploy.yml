@@ -16,8 +16,15 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            set -e  # Aborta inmediatamente si algún comando falla
             cd /var/www/fastcashier/backend
-            git pull origin main
-            npm install
+            
+            # Sincronización estricta sin conflictos
+            git fetch origin main
+            git reset --hard origin/main
+            
+            # npm ci garantiza dependencias exactas usando el package-lock.json
+            npm ci
+            
             NODE_OPTIONS="--max-old-space-size=512" npm run build
             pm2 restart fastcashier-api

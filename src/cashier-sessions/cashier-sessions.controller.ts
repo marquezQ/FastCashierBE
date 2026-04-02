@@ -161,11 +161,29 @@ export class CashierSessionsController {
   @ApiOperation({ summary: 'Close a cashier session' })
   @ApiParam({ name: 'id', description: 'ID of the session' })
   @ApiResponse({ status: 200, description: 'The session has been successfully closed.' })
-  closeSession(
+  async closeSession(
     @Param('id', ParseIntPipe) id: number,
     @Body() closeSessionDto: CloseCashierSessionDto,
   ) {
-    return this.cashierSessionsService.closeSession(id, closeSessionDto);
+    const closedSession = await this.cashierSessionsService.closeSession(id, closeSessionDto);
+    
+    return {
+      message: 'Turno cerrado correctamente',
+      summary: {
+        sessionId: closedSession.idSession,
+        startTime: closedSession.openingDate,
+        endTime: closedSession.closingDate,
+        initialCash: Number(closedSession.initialAmount),
+        cashSales: Number(closedSession.totalCash),
+        qrSales: Number(closedSession.totalQr),
+        totalExpectedCash: Number(closedSession.initialAmount) + Number(closedSession.totalCash),
+        declaredCash: Number(closedSession.closingCashAmount),
+        totalExpectedQr: Number(closedSession.totalQr),
+        declaredQr: Number(closedSession.closingQrAmount),
+        difference: Number(closedSession.difference),
+        totalOrders: closedSession.orderCount,
+      }
+    };
   }
 
   @Delete(':id')
@@ -176,5 +194,28 @@ export class CashierSessionsController {
   @ApiResponse({ status: 204, description: 'The session has been successfully deleted.' })
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.cashierSessionsService.remove(id);
+  }
+
+  @Get(':id/report/pdf')
+  @Roles('ADMIN', 'CASHIER')
+  @ApiOperation({ summary: 'Generate a detailed PDF report for a single cashier session' })
+  @ApiParam({ name: 'id', description: 'ID of the session' })
+  @ApiResponse({ status: 200, description: 'PDF report generated successfully.' })
+  async generateSingleSessionPdfReport(
+    @Param('id', ParseIntPipe) id: number,
+    @Res() res: any,
+  ) {
+    const session = await this.cashierSessionsService.findOne(id);
+    const orders = await this.cashierSessionsService.getSessionOrders(id);
+
+    const buffer = await this.reportsService.generateSingleSessionPdf(session, orders);
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `inline; filename=detalle-turno-${session.idSession}.pdf`,
+      'Content-Length': buffer.length,
+    });
+
+    res.end(buffer);
   }
 }
