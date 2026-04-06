@@ -45,6 +45,7 @@ export class CashierSessionsService {
 
     const session = this.sessionRepository.create({
       ...createSessionDto,
+      openingDate: new Date(),
       status: 'OPEN',
     });
 
@@ -148,7 +149,7 @@ export class CashierSessionsService {
     const cashDifference = closeSessionDto.closingCashAmount - expectedCashTotal;
 
     // Actualizar sesión
-    session.closingDate = closeSessionDto.closingDate;
+    session.closingDate = new Date();
     session.closingCashAmount = closeSessionDto.closingCashAmount;
     session.closingQrAmount = closeSessionDto.closingQrAmount;
     session.difference = cashDifference;
