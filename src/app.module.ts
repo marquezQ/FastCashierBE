@@ -13,6 +13,7 @@ import { OrderDetailsModule } from './order-details/order-details.module';
 import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { DatabaseSeedsModule } from './database/seeds/seeds.module';
 import { ReportsModule } from './reports/reports.module';
+import { TtsModule } from './tts/tts.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { ReportsModule } from './reports/reports.module';
     OrdersModule,
     OrderDetailsModule,
     CloudinaryModule,
+    TtsModule,
   ],
 })
 export class AppModule { }
