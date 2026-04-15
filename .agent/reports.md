@@ -1,6 +1,6 @@
 # 📄 Reports Module
 
-El módulo `reports` se encarga de la generación de documentos PDF para la administración del sistema. No tiene controlador propio — su servicio es inyectado en `CashierSessionsController`.
+El módulo `reports` se encarga de la generación de documentos PDF y datos de rendimiento de ventas. El `ReportsService` es inyectado tanto en `CashierSessionsController` (para PDFs de sesiones) como en su propio `ReportsController` (para datos de ventas).
 
 ---
 
@@ -18,12 +18,13 @@ El módulo `reports` se encarga de la generación de documentos PDF para la admi
 
 ## 📊 Reportes Disponibles
 
-### 1. Reporte de Turnos / Cierre de Caja
+### 1. Reporte de Turnos (Multi-sesión)
 
-**Endpoint**: `GET /api/cashier-sessions/report/pdf`  
-**Acceso**: ADMIN, CASHIER  
-**Content-Type**: `application/pdf`  
-**Content-Disposition**: `inline; filename=reporte-sesiones.pdf` (visualización en el navegador)  
+**Endpoint**: `GET /api/cashier-sessions/report/pdf`
+**Controller**: `CashierSessionsController`
+**Acceso**: ADMIN, CASHIER
+**Content-Type**: `application/pdf`
+**Content-Disposition**: `inline; filename=reporte-sesiones.pdf`
 **Moneda**: Bolivianos (Bs.-)
 
 #### Filtros de Fecha (Query Params)
@@ -57,65 +58,96 @@ El módulo `reports` se encarga de la generación de documentos PDF para la admi
 | QR | `totalQr` |
 | Dif. (Diferencia) | `difference` |
 
-- La **última fila** de la tabla de detalle es un total general (en negrita) sumando todas las columnas numéricas.
-- El valor de las columnas monetarias en la última fila aparece formateado como `Bs.- X.XX`.
+- La **última fila** es un total general (en negrita) sumando todas las columnas numéricas con formato `Bs.- X.XX`.
 
 **Sección 4: Footer**
 - Numeración de páginas: `"Página N de M - Generado el DD/MM/YYYY HH:MM:SS"`
-- Se renderiza en la parte inferior de cada página.
 
 ---
 
-## ⚙️ Lógica de Generación (`ReportsService.generateSessionsPdf`)
+### 2. Reporte de Detalle de Turno Individual (NUEVO)
+
+**Endpoint**: `GET /api/cashier-sessions/:id/report/pdf`
+**Controller**: `CashierSessionsController`
+**Acceso**: ADMIN, CASHIER
+**Content-Type**: `application/pdf`
+**Content-Disposition**: `inline; filename=detalle-turno-{id}.pdf`
+**Moneda**: Bolivianos (Bs.-)
+
+#### Contenido del PDF
+
+**Sección 1: Encabezado**
+- Título: "Reporte a Detalle de Turno"
+- Información del turno: ID, cajero, apertura, cierre (o "PENDIENTE"), fondo de reserva.
+
+**Sección 2: Tabla de Órdenes**
+| Columna | Fuente |
+| :--- | :--- |
+| # Orden | `orderNumber` |
+| Fecha y Hora | `orderDate` formateado DD/MM/YYYY HH:MM |
+| Cliente | `customer` |
+| Tipo | `DINE_IN` → "Mesa", `TAKEOUT` → "Llevar" |
+| Efectivo | Monto si `paymentMethod = 'CASH'`, sino "-" |
+| QR | Monto si `paymentMethod = 'QR'`, sino "-" |
+| Total | `total` de la orden |
+| Estado | `CANCELLED` → "Anulado", resto → "OK" |
+
+- Las órdenes CANCELLED se muestran en rojo e itálica.
+- La última fila muestra "TOTAL VÁLIDO" (excluyendo canceladas).
+
+**Sección 3: Resumen Financiero**
+- **CAJA Y EFECTIVO**: Efectivo Inicial, Ventas Efectivo, Efectivo Esperado, Efectivo Físico en Caja.
+- **TRANSACCIONES (QR)**: Ventas QR Esperado, Ventas QR Declarado.
+- **TOTAL GENERAL**: Suma de efectivo esperado + QR esperado.
+- **SOBRANTE / FALTANTE**: Diferencia total (cash + QR). Si el turno no está cerrado, muestra "PENDIENTE".
+
+**Sección 4: Footer** — Igual que el reporte multi-sesión.
+
+---
+
+### 3. Rendimiento de Ventas (Datos para Gráficos)
+
+**Endpoint**: `GET /api/reports/sales?start=YYYY-MM-DD&end=YYYY-MM-DD`
+**Controller**: `ReportsController`
+**Acceso**: ADMIN
+**Retorna**: `JSON` (no PDF)
+
+#### Auto-agrupación por Rango
+El sistema determina automáticamente la granularidad según el tamaño del rango:
+
+| Rango | Agrupación | Formato Label |
+| :--- | :--- | :--- |
+| < 2 días | Por hora | `HH:MM` |
+| ≤ 14 días | Por día | `Lun 1`, `Mar 2`, etc. |
+| ≤ 60 días | Por semana | `Sem 1`, `Sem 2`, etc. |
+| > 60 días | Por mes | `Ene`, `Feb`, etc. |
+
+#### Respuesta
+```json
+[
+  { "label": "Lun 1", "sales": 1250.50 },
+  { "label": "Mar 2", "sales": 890.00 }
+]
+```
+
+> [!IMPORTANT]
+> Las fechas se parsean como **hora local** (no UTC). `'2026-03-01'` se interpreta como `2026-03-01T00:00:00` en América/La_Paz. Esto es intencional para consistencia con la zona horaria del servidor.
+
+---
+
+## ⚙️ Módulo y Dependencias
 
 ```
-Recibe: sessions: CashierSession[], rangeText: string
-   ↓
-Crea PDFDocument (A4, margen 30px)
-   ↓
-Agrega encabezado y período
-   ↓
-Calcula sumas totales (reduce)
-   ↓
-Renderiza tabla de resumen (anchura 250px)
-   ↓
-Construye filas de detalle por sesión + fila de totales
-   ↓
-Renderiza tabla de detalle (font size 9)
-   ↓
-Itera páginas para agregar footer con numeración
-   ↓
-doc.end() → retorna Promise<Buffer>
+ReportsModule
+├── Exports: ReportsService
+├── Imports: TypeOrmModule.forFeature([Order])
+│
+├── Inyectado en: CashierSessionsController (para PDFs)
+└── Tiene su propio: ReportsController (para datos de ventas)
 ```
 
-El controlador:
-1. Llama a `cashierSessionsService.findAll(query)` para obtener las sesiones filtradas.
-2. Llama a `reportsService.generateSessionsPdf(sessions, rangeText)`.
-3. Configura los headers HTTP: `Content-Type: application/pdf`.
-4. Envía el buffer directamente con `res.end(buffer)`.
+`CashierSessionsModule` importa `ReportsModule` para poder inyectar `ReportsService` en su controlador.
 
 ---
 
-## 🔧 Módulo y Dependencias
-
-`ReportsModule` es **global** o es importado por `CashierSessionsModule`. El `ReportsService` se inyecta en el constructor de `CashierSessionsController`.
-
-```typescript
-// cashier-sessions.module.ts exporta e importa ReportsModule
-@Module({
-  providers: [CashierSessionsService, ReportsService],
-  ...
-})
-```
-
----
-
-## 📈 Futuras Extensiones Posibles
-
-- **Reporte de Cancelaciones PDF**: Exportar el endpoint `GET /orders/metrics/cancellations` como PDF con detalle de órdenes canceladas.
-- **Reporte de Ventas por Producto**: Exportar el top de productos vendidos con imagen.
-- **Reporte de Arqueo Individual**: PDF para una sola sesión con su resumen financiero.
-
----
-
-**Versión:** 2.0 | **Actualizado:** 2026-03-01
+**Versión:** 3.0 | **Actualizado:** 2026-04-14

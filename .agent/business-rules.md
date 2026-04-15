@@ -9,6 +9,7 @@ Este archivo documenta todas las reglas de negocio críticas que rigen el compor
 ### Apertura
 - Un usuario solo puede tener **una sesión `OPEN` a la vez**. Intentar abrir una segunda sesión sin cerrar la anterior lanza `409 Conflict`.
 - El cajero registra un `initialAmount` (monto físico en caja al abrir turno).
+- **El servidor genera `openingDate`** con `new Date()` — el frontend **no** envía timestamp de apertura.
 - El sistema inicializa `totalCash`, `totalQr`, `totalSales` y `orderCount` en `0`.
 
 ### Acumulación de Ventas (en tiempo real)
@@ -19,13 +20,20 @@ Este archivo documenta todas las reglas de negocio críticas que rigen el compor
   - `orderCount += 1`
 - Si se cancela una orden, `deductOrderFromSession()` hace la operación inversa, manteniendo la integridad del arqueo.
 
+> [!IMPORTANT]
+> Los valores numéricos de la sesión se almacenan como `decimal(10,2)` en PostgreSQL. Al operar, se convierten explícitamente con `Number()` para evitar concatenación de strings: `session.totalCash = Number(session.totalCash) + Number(orderTotal)`.
+
 ### Cierre y Arqueo
 - Al cerrar, el cajero provee `closingCashAmount` y `closingQrAmount` (los valores físicos contados).
-- El sistema calcula la **diferencia** automáticamente (solo sobre efectivo):
+- **El servidor genera `closingDate`** con `new Date()` — el frontend **no** envía timestamp de cierre.
+- El sistema calcula la **diferencia total** automáticamente (efectivo + QR):
   ```
-  difference = closingCashAmount - (initialAmount + totalCash)
+  cashDifference = closingCashAmount - (initialAmount + totalCash)
+  qrDifference   = closingQrAmount - totalQr
+  difference     = cashDifference + qrDifference
   ```
-  - Diferencia positiva (sobra) o negativa (falta) indica errores en el manejo de caja.
+  - Diferencia positiva (sobra) o negativa (falta) indica discrepancias en el manejo de caja.
+- La respuesta del cierre incluye un `summary` detallado con: `sessionId`, `startTime`, `endTime`, `initialCash`, `cashSales`, `qrSales`, `totalExpectedCash`, `declaredCash`, `totalExpectedQr`, `declaredQr`, `difference`, `totalOrders`.
 - No se puede cerrar una sesión ya `CLOSED`.
 - No se puede eliminar una sesión que tenga órdenes registradas (`orderCount > 0`).
 
@@ -37,6 +45,10 @@ Devuelve un resumen completo con:
 - Ticket promedio: `totalSales / orderCount`
 - Persona responsable (nombre, email, rol)
 - Estado actual de la sesión
+- `closingDate` (si existe)
+
+### Órdenes de una Sesión (`getSessionOrders`)
+Devuelve todas las órdenes de una sesión específica ordenadas por `orderDate ASC`, con relaciones `details` y `details.product` cargadas. Usado para generar el reporte PDF individual de sesión.
 
 ### Filtrado por Fecha
 El endpoint `GET /api/cashier-sessions` soporta los filtros:
@@ -57,10 +69,11 @@ El endpoint `GET /api/cashier-sessions` soporta los filtros:
 **Proceso de creación:**
 1. Se calculan `subtotal` y `total` desde los precios actuales de los productos.
 2. Se calcula `changeAmount = amountPaid - total` (solo para CASH, si no es 0).
-3. Se genera el `orderNumber` único: formato `ORD-S{sessionId}-{NNNN}` donde `NNNN` es el conteo de órdenes de esa sesión más 1 con cero-relleno izquierdo.
+3. Se genera el `orderNumber` único: formato `ORD-S{sessionId}-{NNN}` donde `NNN` es el conteo de órdenes de esa sesión más 1 con cero-relleno izquierdo (3 dígitos).
 4. Se crea el `Order` con `orderStatus = 'PENDING'`.
 5. Se crean los `OrderDetail` con el `unit_price` congelado al precio actual del producto.
-6. Se actualiza la sesión de caja con los totales acumulados.
+6. Se actualiza la sesión de caja con los totales acumulados (`addOrderToSession()`).
+7. **Se emite evento WebSocket `new_order`** con la orden completa.
 
 **Campos obligatorios en `CreateOrderDto`:**
 - `sessionId`, `cashierId`, `paymentMethod`, `orderType`, `items[]` (con `productId` y `quantity`)
@@ -80,7 +93,7 @@ IN_PREPARATION ─────────────────────�
 READY ─────────────────────────────────────────────CANCELLED
    │                                                      ▲
    ▼                                                      │
-DELIVERED  ←── completedDate se fija en READY o DELIVERED │
+DELIVERED  ←── completedDate se fija en DELIVERED         │
    │                                                      │
    └─────────────────────────────── (DELIVERED no puede ir a CANCELLED)
 ```
@@ -88,7 +101,9 @@ DELIVERED  ←── completedDate se fija en READY o DELIVERED │
 **Reglas:**
 - Solo se pueden hacer transiciones válidas. Cualquier transición inválida lanza `400 Bad Request`.
 - `DELIVERED` y `CANCELLED` son estados finales (sin transiciones posibles).
+- `completedDate` se fija cuando el estado pasa a `DELIVERED` (no en `READY`).
 - La cocina solamente puede operar en el endpoint `PATCH /api/orders/:id/status`.
+- **Se emite evento WebSocket `order_status_updated`** con la orden actualizada después de cualquier cambio de estado.
 
 ### 3. Cancelación
 - Solo se pueden cancelar órdenes que no estén en `DELIVERED`.
@@ -96,6 +111,7 @@ DELIVERED  ←── completedDate se fija en READY o DELIVERED │
   1. Se llama `deductOrderFromSession()` para restar el total de los acumulados de la sesión.
   2. `orderStatus` pasa a `CANCELLED`.
   3. Opcionalmente se registra una razón en `observations`.
+  4. **Se emite evento WebSocket `order_status_updated`** para notificar a la cocina.
 - Las órdenes canceladas se pueden eliminar físicamente (solo ADMIN via `DELETE /api/orders/:id`), pero solo si ya están en estado `CANCELLED`.
 
 ### 4. Vista de Cocina (`getKitchenDisplayOrders`)
@@ -124,11 +140,24 @@ Endpoint `GET /api/orders/metrics/dashboard` (solo ADMIN). Acepta filtros de fec
 | `channels.takeout` | Count de `TAKEOUT` no CANCELLED |
 | `topProducts` | TOP productos por `SUM(quantity)`, incluye `name` e `imageUrl` |
 
+### Reporte de Cancelaciones (`getCancelledOrdersReport`)
+Endpoint `GET /api/orders/metrics/cancellations` (solo ADMIN). Devuelve órdenes canceladas con detalles de productos y cajero.
+
+---
+
+## 🔊 Anuncios TTS para Cocina
+
+Cuando un pedido pasa a estado `READY` en la cocina, el frontend solicita audio al backend:
+1. Frontend llama `GET /api/tts/pedido/{numero}` (número entero, 1-9999).
+2. Backend genera audio MP3 con voz `es-MX-DaliaNeural` diciendo "Pedido número {N}, por favor".
+3. Audio se cachea en memoria por número de pedido (`Map<number, Buffer>`).
+4. Frontend reproduce el audio mediante un `AudioQueueManager` que procesa secuencialmente.
+
 ---
 
 ## 🖼️ Manejo de Imágenes de Productos
 
-- **Flujo de subida**: Cashier admin sube imagen → Multer recibe el archivo en memoria → `CloudinaryService.uploadImage()` → URL pública almacenada en `products.image_url`.
+- **Flujo de subida**: Admin sube imagen → Multer recibe el archivo en memoria → `CloudinaryService.uploadImage()` → URL pública almacenada en `products.image_url`.
 - **Flujo de actualización**: Si se actualiza la imagen, primero se elimina la anterior en Cloudinary (`deleteImage(oldUrl)`) y luego se sube la nueva.
 - **Flujo de eliminación de producto**: Al hacer soft-delete de un producto, la imagen en Cloudinary **no** se elimina (el registro histórico en orders lo necesita).
 - **Extracción de PublicId**: El servicio parsea la URL de Cloudinary para extraer el `publicId` necesario para borrarla: `{folder}/{filename_sin_extension}`.
@@ -145,4 +174,4 @@ Endpoint `GET /api/orders/metrics/dashboard` (solo ADMIN). Acepta filtros de fec
 
 ---
 
-**Versión:** 2.0 | **Actualizado:** 2026-03-01
+**Versión:** 3.0 | **Actualizado:** 2026-04-14

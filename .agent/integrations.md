@@ -4,13 +4,112 @@ Documentación técnica de servicios externos e integraciones del sistema.
 
 ---
 
+## 🔌 WebSockets — Socket.IO (Tiempo Real)
+
+El sistema utiliza **Socket.IO** a través de `@nestjs/websockets` para notificaciones en tiempo real entre el cajero y la cocina.
+
+### Gateway: `OrdersGateway` (`src/orders/orders.gateway.ts`)
+
+```typescript
+@WebSocketGateway({
+    cors: { origin: '*' },
+    namespace: '/orders',
+})
+```
+
+- **Namespace**: `/orders` — El frontend se conecta a `ws://localhost:3000/orders`.
+- **CORS**: Permite todos los orígenes (`*`). En producción, restringir al dominio del frontend.
+- **Transporte**: WebSocket puro (el cliente envía `transports: ['websocket']`).
+
+### Eventos Emitidos (Servidor → Cliente)
+
+| Evento | Momento | Datos |
+| :--- | :--- | :--- |
+| `new_order` | Al crear una orden exitosamente | Objeto `Order` completo con detalles y relaciones |
+| `order_status_updated` | Al cambiar el estado de una orden o cancelarla | Objeto `Order` actualizado |
+
+### Eventos Recibidos (Cliente → Servidor)
+
+| Evento | Respuesta | Propósito |
+| :--- | :--- | :--- |
+| `ping` | `{ event: 'pong', data: 'Connection alive' }` | Health check de la conexión |
+
+### Lifecycle Hooks
+- **`afterInit`** — Log de inicialización del gateway.
+- **`handleConnection`** — Log del ID del socket + conteo de clientes conectados.
+- **`handleDisconnect`** — Log de desconexión del socket.
+
+### Integración con OrdersService
+El gateway se inyecta en `OrdersService` y se invoca en:
+- `create()` → `this.ordersGateway.emitNewOrder(completedOrder)`
+- `updateStatus()` → `this.ordersGateway.emitOrderStatusUpdated(updatedOrder)`
+- `cancel()` → `this.ordersGateway.emitOrderStatusUpdated(updatedOrder)`
+
+---
+
+## 🔊 Text-to-Speech (TTS) — Microsoft Edge
+
+El sistema genera audio MP3 para anunciar pedidos listos en la cocina usando voces neurales de Microsoft Edge.
+
+### Módulo: `TtsModule` (`src/tts/`)
+
+**Componentes:**
+- `TtsController` — Endpoints expuestos (no protegidos por JWT, acceso público).
+- `TtsService` — Lógica de generación de audio con caché en memoria.
+
+### Arquitectura
+
+```
+Frontend (Kitchen)
+     │
+     │ fetch GET /api/tts/pedido/45
+     ▼
+TtsController
+     │
+     │ delega
+     ▼
+TtsService
+     │
+     ├── cache hit? → retorna Buffer del Map
+     │
+     └── cache miss? → genera audio:
+            │
+            ├── Dynamic import: msedge-tts (ESM puro)
+            ├── Voz: es-MX-DaliaNeural
+            ├── Formato: AUDIO_24KHZ_48KBITRATE_MONO_MP3
+            ├── Texto: "Pedido número {N}, por favor"
+            └── toStream() → Buffer → cache + respuesta
+```
+
+### Endpoints TTS
+
+| Método | Ruta | Descripción | Auth |
+| :--- | :--- | :--- | :--- |
+| GET | `/api/tts/pedido/:numero` | Genera/retorna MP3 para un número de pedido (1-9999) | Público |
+| DELETE | `/api/tts/cache` | Limpia toda la caché de audios en memoria | Público |
+
+### Headers de Respuesta (GET pedido)
+```
+Content-Type: audio/mpeg
+Content-Length: {bytes}
+Cache-Control: public, max-age=86400
+```
+
+### Detalles Técnicos Importantes
+- **Dynamic Import**: `msedge-tts` es un módulo ESM puro. NestJS usa CommonJS, así que se importa dinámicamente en `onModuleInit()`.
+- **toStream vs rawToStream**: Se usa `toStream(texto)` con texto plano. `rawToStream()` con SSML personalizado causa desconexión silenciosa del servidor de Microsoft.
+- **Caché**: `Map<number, Buffer>` en memoria. Se almacena el Buffer completo del MP3 por número de pedido. Persiste mientras el proceso esté activo.
+- **Sin Auth**: Los endpoints de TTS no están protegidos por JWT/Roles para permitir acceso directo desde el frontend sin overhead de autenticación para archivos de audio.
+
+---
+
 ## ☁️ Cloudinary (Manejo de Imágenes)
 
 Cloudinary se utiliza para el almacenamiento persistente de imágenes de productos y categorías.
 
 ### Configuración
 
-**Módulo**: `CloudinaryModule` (`src/cloudinary/`)  
+**Módulo**: `CloudinaryModule` (`src/cloudinary/`)
 **Provider**: `cloudinary.provider.ts` — Inicializa el SDK con variables de entorno:
 ```typescript
 cloudinary.config({
@@ -48,8 +147,6 @@ Parsea la URL de Cloudinary para extraer el `publicId`:
 ```
 URL: https://res.cloudinary.com/mycloud/image/upload/v123/products/abc123.jpg
      ↓ parse
-folder: 'products'
-filename sin extensión: 'abc123'
 publicId: 'products/abc123'
 ```
 
@@ -59,26 +156,29 @@ Request (PATCH /products/:id con multipart)
   → Multer intercepta archivo → buffer en memoria
   → deleteImage(oldUrl)         # Elimina imagen anterior
   → uploadImage(file)           # Sube nueva imagen
-  → updateProductDto.imageUrl = result.secure_url  # Actualiza DTO
+  → updateProductDto.imageUrl = result.secure_url
   → productRepository.save()    # Persiste URL en BD
 ```
 
 ### Multer Configuration
 - Multer está configurado en memoria (`memoryStorage()`).
-- El límite de tamaño y tipos de archivo se configuran en los controladores de `products` y `categories`.
 - El campo del formulario debe llamarse `file`.
 
 ---
 
 ## 🚦 CORS
 
-Habilitado globalmente en `main.ts` con:
+Habilitado globalmente en `main.ts`:
 ```typescript
-app.enableCors(); // Permite todos los orígenes
+app.enableCors({
+    origin: '*',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    credentials: true,
+});
 ```
 
 > [!WARNING]
-> En producción, se recomienda configurar CORS con `origin` específico para el dominio del frontend.
+> En producción, configurar `origin` con el dominio específico del frontend.
 
 ---
 
@@ -88,24 +188,11 @@ El proceso de Node.js tiene forzada la zona horaria `America/La_Paz` (UTC-4):
 ```typescript
 process.env.TZ = 'America/La_Paz'; // main.ts línea 2
 ```
+Adicionalmente, la conexión PostgreSQL configura la zona horaria a nivel de sesión:
+```typescript
+extra: { options: '-c timezone=America/La_Paz' }
+```
 Esto impacta todos los timestamps generados por el servidor y los formatos de fecha en los reportes PDF.
-
----
-
-## 📧 Mail (No implementado)
-
-El sistema no tiene integración de correo electrónico actualmente. Se podría integrar `@nestjs-modules/mailer` o `nodemailer` para:
-- Envío de reportes por email.
-- Notificaciones de cierre de caja.
-- Recuperación de contraseñas.
-
----
-
-## 📡 WebSockets / Tiempo Real (No implementado)
-
-Actualmente la cocina utiliza **polling** (el frontend hace requests periódicos). La arquitectura NestJS permite agregar `@WebSocketGateway` para actualizaciones en tiempo real mediante Socket.io:
-- Notificación al crear una nueva orden (cocina ve el pedido instantáneamente).
-- Actualización de estado en tiempo real para el panel del cajero.
 
 ---
 
@@ -121,15 +208,17 @@ TypeOrmModule.forRootAsync({
     username: configService.get('DB_USERNAME'),
     password: configService.get('DB_PASSWORD'),
     database: configService.get('DB_NAME'),
-    entities: [__dirname + '/**/*.entity{.ts,.js}'],
-    synchronize: configService.get('NODE_ENV') === 'development',
-    logging:     configService.get('NODE_ENV') === 'development',
+    autoLoadEntities: true,
+    synchronize: process.env.NODE_ENV !== 'production',
+    dropSchema: process.env.DB_DROP_SCHEMA === 'true',
+    extra: { options: '-c timezone=America/La_Paz' },
   }),
 })
 ```
-- `synchronize: true` solo en `development` — auto-sincroniza el esquema.
-- `logging: true` solo en `development` — imprime queries SQL en consola.
+- `synchronize: true` solo cuando `NODE_ENV !== 'production'` — auto-sincroniza el esquema.
+- `dropSchema: true` solo con `DB_DROP_SCHEMA=true` — permite `npm run db:fresh`.
+- `autoLoadEntities: true` — carga automáticamente todas las entidades registradas en módulos.
 
 ---
 
-**Versión:** 2.0 | **Actualizado:** 2026-03-01
+**Versión:** 3.0 | **Actualizado:** 2026-04-14

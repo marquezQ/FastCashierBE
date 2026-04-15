@@ -65,9 +65,16 @@ Authorization: Bearer <access_token>
 | **Sessions** | `POST /cashier-sessions/:id/close` | ✅ | ✅ | ❌ |
 | **Sessions** | `DELETE /cashier-sessions/:id` | ✅ | ❌ | ❌ |
 | **Sessions** | `GET /cashier-sessions/report/pdf` | ✅ | ✅ | ❌ |
+| **Sessions** | `GET /cashier-sessions/:id/report/pdf` | ✅ | ✅ | ❌ |
+| **Reports** | `GET /reports/sales` | ✅ | ❌ | ❌ |
 | **Products** | `POST /products` | ✅ | ❌ | ❌ |
 | **Products** | `GET /products` | ✅ | ✅ | ✅ |
 | **Categories** | CRUD completo | ✅ | ❌ | ❌ |
+| **TTS** | `GET /tts/pedido/:numero` | ✅ | ✅ | ✅ |
+| **TTS** | `DELETE /tts/cache` | ✅ | ✅ | ✅ |
+
+> [!NOTE]
+> Los endpoints de TTS (`/api/tts/*`) no están protegidos por `JwtAuthGuard` ni `RolesGuard`. Son accesibles sin autenticación para minimizar la latencia en la reproducción de audio en la cocina.
 
 ---
 
@@ -121,4 +128,4 @@ Las entidades `User`, `Category` y `Product` usan `isActive: boolean` en lugar d
 
 ---
 
-**Versión:** 2.0 | **Actualizado:** 2026-03-01
+**Versión:** 3.0 | **Actualizado:** 2026-04-14

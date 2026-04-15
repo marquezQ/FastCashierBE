@@ -14,6 +14,7 @@ import { CloudinaryModule } from './cloudinary/cloudinary.module';
 import { DatabaseSeedsModule } from './database/seeds/seeds.module';
 import { ReportsModule } from './reports/reports.module';
 import { TtsModule } from './tts/tts.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { TtsModule } from './tts/tts.module';
     OrderDetailsModule,
     CloudinaryModule,
     TtsModule,
+    DashboardModule,
   ],
 })
 export class AppModule { }

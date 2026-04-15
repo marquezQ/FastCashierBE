@@ -21,7 +21,6 @@ El sistema sigue convenciones estrictas para garantizar la compatibilidad con he
 - `@ApiBearerAuth('JWT-auth')`: Indica que el endpoint requiere token JWT.
 
 ### Tags Swagger Registrados
-Definidos en `main.ts` con `DocumentBuilder`:
 - `Authentication`: Login, register, validate-token.
 - `Users`: CRUD de usuarios.
 - `Roles`: CRUD de roles.
@@ -29,6 +28,8 @@ Definidos en `main.ts` con `DocumentBuilder`:
 - `Products`: CRUD de productos + búsqueda + agrupado.
 - `Orders`: CRUD de órdenes + kitchen display + métricas.
 - `Cashier Sessions`: Sesiones + estadísticas + PDF.
+- `Reports`: Rendimiento de ventas por rango.
+- `TTS`: Generación de audio para pedidos.
 
 ---
 
@@ -40,6 +41,7 @@ Ubicados en `src/**/dto/*.dto.ts`. Exportados via `index.ts` en cada carpeta.
 - **Creación**: `CreateXxxDto` con todos los campos requeridos y validaciones.
 - **Actualización**: `UpdateXxxDto` extiende `PartialType(CreateXxxDto)` → todos los campos opcionales.
 - **Consulta**: DTOs específicos para query params (ej: `FindAllSessionsDto`, `AdminMetricsFilterDto`).
+- **Respuesta**: DTOs para datos de respuesta estructurados (ej: `SessionStatisticsDto`, `ResponsiblePersonDto`).
 
 ### Validadores Más Usados
 ```typescript
@@ -130,7 +132,7 @@ app.useGlobalPipes(new ValidationPipe({
 ### Orders (`/api/orders`)
 | Método | Ruta | Descripción | Roles |
 | :--- | :--- | :--- | :--- |
-| POST | `/` | Crear orden | ADMIN, CASHIER |
+| POST | `/` | Crear orden (+ emit `new_order` WS) | ADMIN, CASHIER |
 | GET | `/` | Listar órdenes (`?status=`) | Todos |
 | GET | `/pending` | Órdenes pendientes/en-preparación | Todos |
 | GET | `/kitchen-display` | Display cocina (últimas 18h, activas) | Todos |
@@ -142,24 +144,36 @@ app.useGlobalPipes(new ValidationPipe({
 | GET | `/number/:orderNumber` | Por número de orden | Todos |
 | GET | `/:id` | Por ID | Todos |
 | PATCH | `/:id` | Actualizar orden | ADMIN, CASHIER |
-| PATCH | `/:id/status` | Cambiar estado | Todos |
-| POST | `/:id/cancel` | Cancelar orden (`body: {reason}`) | ADMIN, CASHIER |
+| PATCH | `/:id/status` | Cambiar estado (+ emit `order_status_updated` WS) | Todos |
+| POST | `/:id/cancel` | Cancelar orden (+ emit WS, `body: {reason}`) | ADMIN, CASHIER |
 | DELETE | `/:id` | Eliminar (solo CANCELLED) | ADMIN |
 
 ### Cashier Sessions (`/api/cashier-sessions`)
 | Método | Ruta | Descripción | Roles |
 | :--- | :--- | :--- | :--- |
-| POST | `/` | Abrir nueva sesión | ADMIN, CASHIER |
+| POST | `/` | Abrir nueva sesión (server timestamp) | ADMIN, CASHIER |
 | GET | `/` | Listar sesiones (`?period=`, `?startDate=`) | ADMIN, CASHIER |
-| GET | `/report/pdf` | Generar PDF de sesiones | ADMIN, CASHIER |
+| GET | `/report/pdf` | Generar PDF multi-sesión | ADMIN, CASHIER |
 | GET | `/user/:userId` | Sesiones de un usuario | ADMIN, CASHIER |
 | GET | `/current/:userId` | Sesión activa de un usuario | ADMIN, CASHIER |
 | GET | `/:id` | Por ID | ADMIN, CASHIER |
 | GET | `/:id/summary` | Resumen financiero de sesión | ADMIN, CASHIER |
 | GET | `/:id/statistics` | Estadísticas detalladas | ADMIN, CASHIER |
+| GET | `/:id/report/pdf` | **PDF individual de sesión con órdenes** | ADMIN, CASHIER |
 | PATCH | `/:id` | Actualizar sesión abierta | ADMIN, CASHIER |
-| POST | `/:id/close` | Cerrar sesión | ADMIN, CASHIER |
+| POST | `/:id/close` | Cerrar sesión (server timestamp) | ADMIN, CASHIER |
 | DELETE | `/:id` | Eliminar sesión vacía y cerrada | ADMIN |
+
+### Reports (`/api/reports`)
+| Método | Ruta | Descripción | Roles |
+| :--- | :--- | :--- | :--- |
+| GET | `/sales?start=&end=` | Rendimiento de ventas por rango (JSON) | ADMIN |
+
+### TTS (`/api/tts`)
+| Método | Ruta | Descripción | Roles |
+| :--- | :--- | :--- | :--- |
+| GET | `/pedido/:numero` | Generar/retornar audio MP3 (1-9999) | Público |
+| DELETE | `/cache` | Limpiar caché de audios | Público |
 
 ---
 
@@ -175,7 +189,8 @@ app.useGlobalPipes(new ValidationPipe({
 | `403 Forbidden` | Token válido pero sin el rol requerido |
 | `404 Not Found` | Recurso no encontrado por ID |
 | `409 Conflict` | Violación de unicidad (ej: sesión ya abierta, código de producto duplicado) |
+| `500 Internal Server Error` | Error del servidor (ej: fallo de generación TTS) |
 
 ---
 
-**Versión:** 2.0 | **Actualizado:** 2026-03-01
+**Versión:** 3.0 | **Actualizado:** 2026-04-14

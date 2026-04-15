@@ -94,8 +94,8 @@ erDiagram
 | :--- | :--- | :--- |
 | `id_session` | PK int | Auto-generado |
 | `user_id` | FK int | Cajero responsable |
-| `opening_date` | timestamp | Fecha/hora de apertura |
-| `closing_date` | timestamp | Nullable, se llena al cerrar |
+| `opening_date` | timestamp | **Generado por el servidor** (`new Date()`) al crear la sesión |
+| `closing_date` | timestamp | Nullable, **generado por el servidor** al cerrar |
 | `initial_amount` | decimal(10,2) | Monto inicial en caja al abrir |
 | `total_cash` | decimal(10,2) | Efectivo acumulado por ventas (default: 0) |
 | `total_qr` | decimal(10,2) | QR acumulado por ventas (default: 0) |
@@ -103,7 +103,7 @@ erDiagram
 | `closing_qr_amount` | decimal(10,2) | QR real al cierre |
 | `total_sales` | decimal(10,2) | Total ventas (cash + qr), excluye canceladas |
 | `order_count` | int | Conteo de órdenes activas (se decrementa al cancelar) |
-| `difference` | decimal(10,2) | `closingCashAmount - (initialAmount + totalCash)` |
+| `difference` | decimal(10,2) | `(closingCash - expectedCash) + (closingQr - expectedQr)` — incluye efectivo y QR |
 | `observations` | text | Notas del cajero al cierre |
 | `status` | varchar(20) | `OPEN` \| `CLOSED` (default: `OPEN`) |
 
@@ -128,7 +128,7 @@ erDiagram
 | `change_amount` | decimal(10,2) | Vuelto = `amountPaid - total` |
 | `order_status` | varchar(20) | `PENDING` → `IN_PREPARATION` → `READY` → `DELIVERED` \| `CANCELLED` |
 | `preparation_start_date` | timestamp | Se fija al transitar a `IN_PREPARATION` |
-| `completed_date` | timestamp | Se fija al transitar a `READY` o `DELIVERED` |
+| `completed_date` | timestamp | Se fija al transitar a `DELIVERED` (no en READY) |
 | `customer` | varchar(100) | Nombre del cliente (opcional) |
 | `observations` | text | Notas adicionales / razón de cancelación |
 | `updated_at` | timestamp | Auto-actualizado |
@@ -165,4 +165,4 @@ erDiagram
 
 ---
 
-**Versión:** 2.0 | **Actualizado:** 2026-03-01
+**Versión:** 3.0 | **Actualizado:** 2026-04-14
