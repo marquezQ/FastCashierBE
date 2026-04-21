@@ -18,15 +18,17 @@ export class ReportsController {
 
   @Get('sales')
   @Roles('ADMIN')
-  @ApiOperation({ summary: 'Obtener rendimiento de ventas por rango de fechas' })
-  @ApiQuery({ name: 'start', description: 'Fecha de inicio (YYYY-MM-DD)', example: '2024-03-01' })
-  @ApiQuery({ name: 'end', description: 'Fecha de fin (YYYY-MM-DD)', example: '2024-03-12' })
+  @ApiOperation({ summary: 'Obtener rendimiento de ventas' })
+  @ApiQuery({ name: 'period', required: false, enum: ['DAY', 'WEEK', 'MONTH', 'YEAR'], description: 'Periodo de agrupación predefinido' })
+  @ApiQuery({ name: 'start', required: false, description: 'Fecha de inicio (YYYY-MM-DD)', example: '2024-03-01' })
+  @ApiQuery({ name: 'end', required: false, description: 'Fecha de fin (YYYY-MM-DD)', example: '2024-03-12' })
   @ApiResponse({ status: 200, description: 'Datos de ventas agrupados.' })
   @ApiResponse({ status: 401, description: 'No autorizado.' })
   async getSalesPerformance(
-    @Query('start') start: string,
-    @Query('end') end: string,
+    @Query('period') period?: 'DAY' | 'WEEK' | 'MONTH' | 'YEAR',
+    @Query('start') start?: string,
+    @Query('end') end?: string,
   ) {
-    return this.reportsService.getSalesPerformance(start, end);
+    return this.reportsService.getSalesPerformance(period, start, end);
   }
 }

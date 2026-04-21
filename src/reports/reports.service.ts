@@ -12,72 +12,145 @@ export class ReportsService {
         private readonly orderRepository: Repository<Order>,
     ) { }
 
-    async getSalesPerformance(start: string, end: string) {
-        // Parse as LOCAL time by appending T00:00:00 without Z if no time is given.
-        // new Date('YYYY-MM-DD') parses as UTC midnight — WRONG for La Paz.
-        // new Date('YYYY-MM-DDT00:00:00') parses as local midnight — CORRECT.
-        const startDate = start.includes('T')
-            ? new Date(start)
-            : new Date(start + 'T00:00:00');
-
-        const endDate = end.includes('T')
-            ? new Date(end)
-            : new Date(end + 'T00:00:00');
-
-        // Force end to include the full day (only when no specific time was given)
-        if (!end.includes('T')) {
-            endDate.setHours(23, 59, 59, 999);
-        }
-
-        const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
+    async getSalesPerformance(period?: 'DAY' | 'WEEK' | 'MONTH' | 'YEAR', start?: string, end?: string) {
+        let startDate: Date;
+        let endDate: Date;
         let groupBy: 'hour' | 'day' | 'week' | 'month';
-        if (diffDays < 2) {
-            groupBy = 'hour';
-        } else if (diffDays <= 14) {
-            groupBy = 'day';
-        } else if (diffDays <= 60) {
-            groupBy = 'week';
+
+        const now = new Date();
+
+        if (period) {
+            switch (period) {
+                case 'DAY':
+                    startDate = new Date(now);
+                    startDate.setHours(0, 0, 0, 0);
+                    endDate = new Date(now);
+                    endDate.setHours(23, 59, 59, 999);
+                    groupBy = 'hour';
+                    break;
+                case 'WEEK':
+                    startDate = new Date(now);
+                    const day = startDate.getDay();
+                    const diff = startDate.getDate() - day + (day === 0 ? -6 : 1); // Adjust for Monday start
+                    startDate.setDate(diff);
+                    startDate.setHours(0, 0, 0, 0);
+                    endDate = new Date(startDate);
+                    endDate.setDate(startDate.getDate() + 6);
+                    endDate.setHours(23, 59, 59, 999);
+                    groupBy = 'day';
+                    break;
+                case 'MONTH':
+                    startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                    endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                    endDate.setHours(23, 59, 59, 999);
+                    groupBy = 'week';
+                    break;
+                case 'YEAR':
+                    startDate = new Date(now.getFullYear(), 0, 1);
+                    endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+                    groupBy = 'month';
+                    break;
+            }
         } else {
-            groupBy = 'month';
+            // Fallback to manual dates or default to week if none provided
+            if (!start || !end) {
+                // Default to last 7 days if nothing provided
+                endDate = new Date();
+                startDate = new Date();
+                startDate.setDate(endDate.getDate() - 7);
+                startDate.setHours(0, 0, 0, 0);
+                endDate.setHours(23, 59, 59, 999);
+                groupBy = 'day';
+            } else {
+                startDate = start.includes('T') ? new Date(start) : new Date(start + 'T00:00:00');
+                endDate = end.includes('T') ? new Date(end) : new Date(end + 'T00:00:00');
+                if (!end.includes('T')) endDate.setHours(23, 59, 59, 999);
+
+                const diffDays = Math.ceil(Math.abs(endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+                if (diffDays < 2) groupBy = 'hour';
+                else if (diffDays <= 14) groupBy = 'day';
+                else if (diffDays <= 60) groupBy = 'week';
+                else groupBy = 'month';
+            }
         }
 
+        // 1. Initialize result series with zeros
+        const groupedData: { label: string; sales: number }[] = this.generateSkeleton(startDate, endDate, groupBy);
+
+        // 2. Fetch orders
         const orders = await this.orderRepository
             .createQueryBuilder('order')
-            .where('order.order_date BETWEEN :start AND :end', { start: startDate, end: endDate })
-            .andWhere('order.order_status != :status', { status: 'CANCELLED' })
-            .orderBy('order.order_date', 'ASC')
+            .where('order.orderDate BETWEEN :start AND :end', { start: startDate, end: endDate })
+            .andWhere('order.orderStatus != :status', { status: 'CANCELLED' })
             .getMany();
 
-        const groupedData: { [key: string]: number } = {};
-
+        // 3. Map orders to skeleton
         orders.forEach((order) => {
             const label = this.getLabel(order.orderDate, groupBy);
-            groupedData[label] = (groupedData[label] || 0) + Number(order.total);
+            const dataPoint = groupedData.find(d => d.label === label);
+            if (dataPoint) {
+                dataPoint.sales = Number((dataPoint.sales + Number(order.total)).toFixed(2));
+            }
         });
 
-        return Object.entries(groupedData).map(([label, sales]) => ({
-            label,
-            sales: parseFloat(sales.toFixed(2)),
-        }));
+        return groupedData;
+    }
+
+    private generateSkeleton(start: Date, end: Date, groupBy: 'hour' | 'day' | 'week' | 'month'): { label: string; sales: number }[] {
+        const skeleton: { label: string; sales: number }[] = [];
+        const current = new Date(start);
+
+        switch (groupBy) {
+            case 'hour':
+                for (let h = 0; h < 24; h++) {
+                    const d = new Date(start);
+                    d.setHours(h, 0, 0, 0);
+                    skeleton.push({ label: this.getLabel(d, 'hour'), sales: 0 });
+                }
+                break;
+            case 'day':
+                while (current <= end) {
+                    skeleton.push({ label: this.getLabel(current, 'day'), sales: 0 });
+                    current.setDate(current.getDate() + 1);
+                }
+                break;
+            case 'week':
+                // For a month, usually 4-5 weeks
+                // For custom ranges, this might be more complex, but let's standardise
+                let w = 1;
+                while (current <= end) {
+                    skeleton.push({ label: `Sem ${w}`, sales: 0 });
+                    current.setDate(current.getDate() + 7);
+                    w++;
+                }
+                break;
+            case 'month':
+                for (let m = 0; m < 12; m++) {
+                    const d = new Date(start.getFullYear(), m, 1);
+                    skeleton.push({ label: this.getLabel(d, 'month'), sales: 0 });
+                }
+                break;
+        }
+        return skeleton;
     }
 
     private getLabel(date: Date, groupBy: 'hour' | 'day' | 'week' | 'month'): string {
         const d = new Date(date);
         switch (groupBy) {
             case 'hour':
-                return d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+                // Reset minutes to '00' so it matches the skeleton (e.g., 21:45 -> 21:00)
+                const hourDate = new Date(d);
+                hourDate.setMinutes(0, 0, 0);
+                return hourDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
             case 'day':
                 const days = ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'];
                 return `${days[d.getDay()]} ${d.getDate()}`;
-            case 'week':
-                // Approximation of week of the month
-                const weekNum = Math.ceil(d.getDate() / 7);
-                return `Sem ${weekNum}`;
             case 'month':
                 const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
                 return months[d.getMonth()];
+            case 'week':
+                const weekNum = Math.ceil(d.getDate() / 7);
+                return `Sem ${weekNum}`;
             default:
                 return '';
         }

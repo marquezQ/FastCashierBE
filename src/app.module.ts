@@ -54,6 +54,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
     CloudinaryModule,
     TtsModule,
     DashboardModule,
+    ReportsModule,
   ],
 })
 export class AppModule { }
