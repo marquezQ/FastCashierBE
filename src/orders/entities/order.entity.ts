@@ -7,12 +7,14 @@ import {
   OneToMany,
   JoinColumn,
   UpdateDateColumn,
+  Index,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { CashierSession } from '../../cashier-sessions/entities/cashier-session.entity';
 import { OrderDetail } from '../../order-details/entities/order-detail.entity';
 
 @Entity('orders')
+@Index('IDX_ORDERS_DATE', ['orderDate'])
 export class Order {
   @PrimaryGeneratedColumn({ name: 'id_order' })
   idOrder: number;

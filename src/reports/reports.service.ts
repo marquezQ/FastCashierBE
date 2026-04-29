@@ -12,7 +12,7 @@ export class ReportsService {
         private readonly orderRepository: Repository<Order>,
     ) { }
 
-    async getSalesPerformance(period?: 'DAY' | 'WEEK' | 'MONTH' | 'YEAR', start?: string, end?: string) {
+    private getDateRange(period?: 'DAY' | 'WEEK' | 'MONTH' | 'YEAR', start?: string, end?: string) {
         let startDate: Date;
         let endDate: Date;
         let groupBy: 'hour' | 'day' | 'week' | 'month';
@@ -73,31 +73,90 @@ export class ReportsService {
                 else groupBy = 'month';
             }
         }
+        return { startDate, endDate, groupBy };
+    }
 
-        // 1. Initialize result series with zeros
-        const groupedData: { label: string; sales: number }[] = this.generateSkeleton(startDate, endDate, groupBy);
+    async getSalesPerformance(period?: 'DAY' | 'WEEK' | 'MONTH' | 'YEAR', start?: string, end?: string) {
+        const { startDate, endDate, groupBy } = this.getDateRange(period, start, end);
+        const groupedData = this.generateSkeleton(startDate, endDate, groupBy, { sales: 0 });
 
-        // 2. Fetch orders
-        const orders = await this.orderRepository
+        const rawResults = await this.orderRepository
             .createQueryBuilder('order')
+            .select(`DATE_TRUNC('${groupBy}', order.orderDate)`, 'date')
+            .addSelect('SUM(order.total)', 'sales')
             .where('order.orderDate BETWEEN :start AND :end', { start: startDate, end: endDate })
             .andWhere('order.orderStatus != :status', { status: 'CANCELLED' })
-            .getMany();
+            .groupBy('date')
+            .getRawMany();
 
-        // 3. Map orders to skeleton
-        orders.forEach((order) => {
-            const label = this.getLabel(order.orderDate, groupBy);
+        rawResults.forEach((row) => {
+            if (!row.date) return;
+            const label = this.getLabel(new Date(row.date), groupBy);
             const dataPoint = groupedData.find(d => d.label === label);
             if (dataPoint) {
-                dataPoint.sales = Number((dataPoint.sales + Number(order.total)).toFixed(2));
+                dataPoint.sales = Number((dataPoint.sales + Number(row.sales)).toFixed(2));
             }
         });
 
         return groupedData;
     }
 
-    private generateSkeleton(start: Date, end: Date, groupBy: 'hour' | 'day' | 'week' | 'month'): { label: string; sales: number }[] {
-        const skeleton: { label: string; sales: number }[] = [];
+    async getPaymentMethodsPerformance(period?: 'DAY' | 'WEEK' | 'MONTH' | 'YEAR', start?: string, end?: string) {
+        const { startDate, endDate, groupBy } = this.getDateRange(period, start, end);
+        const groupedData = this.generateSkeleton(startDate, endDate, groupBy, { efectivo: 0, qr: 0 });
+
+        const rawResults = await this.orderRepository
+            .createQueryBuilder('order')
+            .select(`DATE_TRUNC('${groupBy}', order.orderDate)`, 'date')
+            .addSelect(`SUM(CASE WHEN order.paymentMethod = 'CASH' THEN order.total ELSE 0 END)`, 'efectivo')
+            .addSelect(`SUM(CASE WHEN order.paymentMethod = 'QR' THEN order.total ELSE 0 END)`, 'qr')
+            .where('order.orderDate BETWEEN :start AND :end', { start: startDate, end: endDate })
+            .andWhere('order.orderStatus != :status', { status: 'CANCELLED' })
+            .groupBy('date')
+            .getRawMany();
+
+        rawResults.forEach((row) => {
+            if (!row.date) return;
+            const label = this.getLabel(new Date(row.date), groupBy);
+            const dataPoint = groupedData.find(d => d.label === label);
+            if (dataPoint) {
+                dataPoint.efectivo = Number((dataPoint.efectivo + Number(row.efectivo)).toFixed(2));
+                dataPoint.qr = Number((dataPoint.qr + Number(row.qr)).toFixed(2));
+            }
+        });
+
+        return groupedData;
+    }
+
+    async getOrderTypesPerformance(period?: 'DAY' | 'WEEK' | 'MONTH' | 'YEAR', start?: string, end?: string) {
+        const { startDate, endDate, groupBy } = this.getDateRange(period, start, end);
+        const groupedData = this.generateSkeleton(startDate, endDate, groupBy, { mesa: 0, llevar: 0 });
+
+        const rawResults = await this.orderRepository
+            .createQueryBuilder('order')
+            .select(`DATE_TRUNC('${groupBy}', order.orderDate)`, 'date')
+            .addSelect(`SUM(CASE WHEN order.orderType = 'DINE_IN' THEN 1 ELSE 0 END)::int`, 'mesa')
+            .addSelect(`SUM(CASE WHEN order.orderType = 'TAKEOUT' THEN 1 ELSE 0 END)::int`, 'llevar')
+            .where('order.orderDate BETWEEN :start AND :end', { start: startDate, end: endDate })
+            .andWhere('order.orderStatus != :status', { status: 'CANCELLED' })
+            .groupBy('date')
+            .getRawMany();
+
+        rawResults.forEach((row) => {
+            if (!row.date) return;
+            const label = this.getLabel(new Date(row.date), groupBy);
+            const dataPoint = groupedData.find(d => d.label === label);
+            if (dataPoint) {
+                dataPoint.mesa += Number(row.mesa);
+                dataPoint.llevar += Number(row.llevar);
+            }
+        });
+
+        return groupedData;
+    }
+
+    private generateSkeleton<T>(start: Date, end: Date, groupBy: 'hour' | 'day' | 'week' | 'month', initialValues: T): (T & { label: string })[] {
+        const skeleton: (T & { label: string })[] = [];
         const current = new Date(start);
 
         switch (groupBy) {
@@ -105,21 +164,19 @@ export class ReportsService {
                 for (let h = 0; h < 24; h++) {
                     const d = new Date(start);
                     d.setHours(h, 0, 0, 0);
-                    skeleton.push({ label: this.getLabel(d, 'hour'), sales: 0 });
+                    skeleton.push({ label: this.getLabel(d, 'hour'), ...initialValues });
                 }
                 break;
             case 'day':
                 while (current <= end) {
-                    skeleton.push({ label: this.getLabel(current, 'day'), sales: 0 });
+                    skeleton.push({ label: this.getLabel(current, 'day'), ...initialValues });
                     current.setDate(current.getDate() + 1);
                 }
                 break;
             case 'week':
-                // For a month, usually 4-5 weeks
-                // For custom ranges, this might be more complex, but let's standardise
                 let w = 1;
                 while (current <= end) {
-                    skeleton.push({ label: `Sem ${w}`, sales: 0 });
+                    skeleton.push({ label: `Sem ${w}`, ...initialValues });
                     current.setDate(current.getDate() + 7);
                     w++;
                 }
@@ -127,18 +184,17 @@ export class ReportsService {
             case 'month':
                 for (let m = 0; m < 12; m++) {
                     const d = new Date(start.getFullYear(), m, 1);
-                    skeleton.push({ label: this.getLabel(d, 'month'), sales: 0 });
+                    skeleton.push({ label: this.getLabel(d, 'month'), ...initialValues });
                 }
                 break;
         }
-        return skeleton;
+        return JSON.parse(JSON.stringify(skeleton)); // Deep clone to avoid shared object references
     }
 
     private getLabel(date: Date, groupBy: 'hour' | 'day' | 'week' | 'month'): string {
         const d = new Date(date);
         switch (groupBy) {
             case 'hour':
-                // Reset minutes to '00' so it matches the skeleton (e.g., 21:45 -> 21:00)
                 const hourDate = new Date(d);
                 hourDate.setMinutes(0, 0, 0);
                 return hourDate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });

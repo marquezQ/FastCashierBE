@@ -31,4 +31,36 @@ export class ReportsController {
   ) {
     return this.reportsService.getSalesPerformance(period, start, end);
   }
+
+  @Get('payment-methods')
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'Obtener métodos de pago (Efectivo vs QR)' })
+  @ApiQuery({ name: 'period', required: false, enum: ['DAY', 'WEEK', 'MONTH', 'YEAR'], description: 'Periodo de agrupación predefinido' })
+  @ApiQuery({ name: 'start', required: false, description: 'Fecha de inicio (YYYY-MM-DD)', example: '2024-03-01' })
+  @ApiQuery({ name: 'end', required: false, description: 'Fecha de fin (YYYY-MM-DD)', example: '2024-03-12' })
+  @ApiResponse({ status: 200, description: 'Datos de métodos de pago.' })
+  @ApiResponse({ status: 401, description: 'No autorizado.' })
+  async getPaymentMethodsPerformance(
+    @Query('period') period?: 'DAY' | 'WEEK' | 'MONTH' | 'YEAR',
+    @Query('start') start?: string,
+    @Query('end') end?: string,
+  ) {
+    return this.reportsService.getPaymentMethodsPerformance(period, start, end);
+  }
+
+  @Get('order-types')
+  @Roles('ADMIN')
+  @ApiOperation({ summary: 'Obtener tipos de pedido (Mesa vs Llevar)' })
+  @ApiQuery({ name: 'period', required: false, enum: ['DAY', 'WEEK', 'MONTH', 'YEAR'], description: 'Periodo de agrupación predefinido' })
+  @ApiQuery({ name: 'start', required: false, description: 'Fecha de inicio (YYYY-MM-DD)', example: '2024-03-01' })
+  @ApiQuery({ name: 'end', required: false, description: 'Fecha de fin (YYYY-MM-DD)', example: '2024-03-12' })
+  @ApiResponse({ status: 200, description: 'Datos de tipos de pedido.' })
+  @ApiResponse({ status: 401, description: 'No autorizado.' })
+  async getOrderTypesPerformance(
+    @Query('period') period?: 'DAY' | 'WEEK' | 'MONTH' | 'YEAR',
+    @Query('start') start?: string,
+    @Query('end') end?: string,
+  ) {
+    return this.reportsService.getOrderTypesPerformance(period, start, end);
+  }
 }
