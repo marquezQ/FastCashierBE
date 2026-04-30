@@ -14,6 +14,7 @@ erDiagram
     USERS ||--o{ ORDERS : "cook 1:N (cookId)"
     USERS ||--o{ USERS : "auto-ref (createdBy)"
     CATEGORIES ||--o{ PRODUCTS : "1:N (idCategory)"
+    CATEGORIES ||--o{ DISPLAY_CONFIGS : "1:N (categoryId, nullable)"
     PRODUCTS ||--o{ ORDER_DETAILS : "1:N (productId)"
     CASHIER_SESSIONS ||--o{ ORDERS : "1:N (sessionId)"
     ORDERS ||--|{ ORDER_DETAILS : "1:N (orderId, CASCADE)"
@@ -86,6 +87,29 @@ erDiagram
 
 > [!NOTE]
 > No se elimina físicamente un producto con historial de ventas. En su lugar se usa `isActive = false`.
+
+---
+
+### 📺 `display_configs` — Configuraciones de Pantalla TV
+| Columna | Tipo | Detalles |
+| :--- | :--- | :--- |
+| `id_display_config` | PK int | Auto-generado |
+| `name` | varchar(100) | Nombre descriptivo de la configuración |
+| `access_token` | varchar(10) | Código único de 6 caracteres (alfanumérico, auto-generado) |
+| `category_id` | FK int | Nullable. Referencia a `categories`. `null` = todos los productos |
+| `rotation_interval` | int | Segundos por slide (default: 8, min: 3, max: 60) |
+| `transition_type` | varchar(20) | `slide` \| `fade` \| `zoom` (default: `slide`) |
+| `show_prices` | boolean | Mostrar precios (default: true) |
+| `show_descriptions` | boolean | Mostrar descripciones (default: false) |
+| `products_per_slide` | int | Productos por slide (default: 3, min: 1, max: 6) |
+| `is_active` | boolean | Config activa (default: true). Inactiva = 404 en endpoint público |
+| `created_at` | timestamp | Auto-generado |
+| `updated_at` | timestamp | Auto-actualizado |
+
+**Relaciones:** `N:1 → categories` (nullable, `onDelete: SET NULL`)
+
+> [!NOTE]
+> El `access_token` es un código corto de 6 caracteres alfanuméricos (sin 0/O/1/I/L para evitar confusión). Se genera automáticamente al crear la configuración y se usa como identificador público en la URL de la TV: `GET /api/display/{token}`.
 
 ---
 
@@ -165,4 +189,4 @@ erDiagram
 
 ---
 
-**Versión:** 3.0 | **Actualizado:** 2026-04-14
+**Versión:** 3.1 | **Actualizado:** 2026-04-24

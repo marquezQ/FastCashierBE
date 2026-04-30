@@ -72,9 +72,14 @@ Authorization: Bearer <access_token>
 | **Categories** | CRUD completo | ✅ | ❌ | ❌ |
 | **TTS** | `GET /tts/pedido/:numero` | ✅ | ✅ | ✅ |
 | **TTS** | `DELETE /tts/cache` | ✅ | ✅ | ✅ |
+| **Display Configs** | `POST /display-configs` | ✅ | ❌ | ❌ |
+| **Display Configs** | `GET /display-configs` | ✅ | ❌ | ❌ |
+| **Display Configs** | `PATCH /display-configs/:id` | ✅ | ❌ | ❌ |
+| **Display Configs** | `DELETE /display-configs/:id` | ✅ | ❌ | ❌ |
+| **Display Público** | `GET /display/:token` | ✅ | ✅ | ✅ |
 
 > [!NOTE]
-> Los endpoints de TTS (`/api/tts/*`) no están protegidos por `JwtAuthGuard` ni `RolesGuard`. Son accesibles sin autenticación para minimizar la latencia en la reproducción de audio en la cocina.
+> Los endpoints de TTS (`/api/tts/*`) y Display Público (`/api/display/:token`) no están protegidos por `JwtAuthGuard` ni `RolesGuard`. Son accesibles sin autenticación. TTS minimiza latencia en la cocina; Display permite que las TVs accedan sin credenciales.
 
 ---
 
@@ -128,4 +133,4 @@ Las entidades `User`, `Category` y `Product` usan `isActive: boolean` en lugar d
 
 ---
 
-**Versión:** 3.0 | **Actualizado:** 2026-04-14
+**Versión:** 3.1 | **Actualizado:** 2026-04-24

@@ -2,7 +2,7 @@
 
 Bienvenido al contexto modular de **FastCashierBE**. Esta carpeta contiene la documentación estructurada y actualizada necesaria para que cualquier agente de IA o desarrollador comprenda el proyecto rápidamente sin procesar archivos masivos.
 
-**FastCashierBE** es la API REST del sistema de Punto de Venta (POS) para un negocio de comida rápida (pollo broaster). Gestiona usuarios, sesiones de caja, órdenes, productos, categorías, reportes PDF, métricas administrativas, notificaciones WebSocket en tiempo real y audio TTS para anuncios de pedidos.
+**FastCashierBE** es la API REST del sistema de Punto de Venta (POS) para un negocio de comida rápida (pollo broaster). Gestiona usuarios, sesiones de caja, órdenes, productos, categorías, reportes PDF, métricas administrativas, notificaciones WebSocket en tiempo real, audio TTS para anuncios de pedidos y configuraciones de pantallas TV para menú digital.
 
 ---
 
@@ -35,6 +35,7 @@ FastCashierBE/
 │   ├── cashier-sessions/   # Apertura/cierre de caja, estadísticas, PDF individual
 │   ├── reports/            # ReportsService + ReportsController: PDFs y datos de ventas
 │   ├── tts/                # TTS con msedge-tts: genera audio MP3 para anuncios de pedidos
+│   ├── display-configs/    # Configuraciones de pantallas TV para menú digital público
 │   ├── cloudinary/         # CloudinaryService: upload/delete vía stream
 │   ├── database/           # Seeds: roles, users, categories, products
 │   ├── app.module.ts       # Módulo raíz + TypeORM + ConfigModule + todos los módulos
@@ -93,4 +94,4 @@ Antes de trabajar en cualquier funcionalidad, lee el archivo correspondiente:
 
 ---
 
-**Versión:** 3.0 | **Actualizado:** 2026-04-14 | **Revisado por:** Antigravity (análisis completo del código fuente)
+**Versión:** 3.1 | **Actualizado:** 2026-04-24 | **Revisado por:** Antigravity (análisis completo del código fuente)

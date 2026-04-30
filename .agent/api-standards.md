@@ -30,6 +30,8 @@ El sistema sigue convenciones estrictas para garantizar la compatibilidad con he
 - `Cashier Sessions`: Sesiones + estadísticas + PDF.
 - `Reports`: Rendimiento de ventas por rango.
 - `TTS`: Generación de audio para pedidos.
+- `Display Configs`: CRUD de configuraciones de pantallas TV (admin).
+- `Display Público`: Datos de menú para TVs (público, sin auth).
 
 ---
 
@@ -175,6 +177,19 @@ app.useGlobalPipes(new ValidationPipe({
 | GET | `/pedido/:numero` | Generar/retornar audio MP3 (1-9999) | Público |
 | DELETE | `/cache` | Limpiar caché de audios | Público |
 
+### Display Configs (`/api/display-configs`)
+| Método | Ruta | Descripción | Roles |
+| :--- | :--- | :--- | :--- |
+| POST | `/` | Crear configuración de pantalla (genera accessToken) | ADMIN |
+| GET | `/` | Listar todas las configuraciones | ADMIN |
+| PATCH | `/:id` | Actualizar configuración parcialmente | ADMIN |
+| DELETE | `/:id` | Eliminar configuración permanentemente | ADMIN |
+
+### Display Público (`/api/display`)
+| Método | Ruta | Descripción | Roles |
+| :--- | :--- | :--- | :--- |
+| GET | `/:token` | Obtener datos de menú para la TV | Público |
+
 ---
 
 ## 🔄 Códigos de Respuesta Estándar
@@ -193,4 +208,4 @@ app.useGlobalPipes(new ValidationPipe({
 
 ---
 
-**Versión:** 3.0 | **Actualizado:** 2026-04-14
+**Versión:** 3.1 | **Actualizado:** 2026-04-24

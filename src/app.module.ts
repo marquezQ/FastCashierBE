@@ -15,6 +15,7 @@ import { DatabaseSeedsModule } from './database/seeds/seeds.module';
 import { ReportsModule } from './reports/reports.module';
 import { TtsModule } from './tts/tts.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { DisplayConfigsModule } from './display-configs/display-configs.module';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
     TtsModule,
     DashboardModule,
     ReportsModule,
+    DisplayConfigsModule,
   ],
 })
 export class AppModule { }
