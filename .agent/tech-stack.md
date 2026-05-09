@@ -149,4 +149,4 @@ Los seeders utilizan lógica de upsert (solo crean si no existen), por lo que so
 
 ---
 
-**Versión:** 3.0 | **Actualizado:** 2026-04-14
+**Versión:** 3.1 | **Actualizado:** 2026-05-05

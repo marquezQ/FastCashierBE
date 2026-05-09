@@ -107,20 +107,11 @@ El módulo `reports` se encarga de la generación de documentos PDF y datos de r
 
 ### 3. Rendimiento de Ventas (Datos para Gráficos)
 
-**Endpoint**: `GET /api/reports/sales?start=YYYY-MM-DD&end=YYYY-MM-DD`
+**Endpoint**: `GET /api/reports/sales`
 **Controller**: `ReportsController`
 **Acceso**: ADMIN
-**Retorna**: `JSON` (no PDF)
-
-#### Auto-agrupación por Rango
-El sistema determina automáticamente la granularidad según el tamaño del rango:
-
-| Rango | Agrupación | Formato Label |
-| :--- | :--- | :--- |
-| < 2 días | Por hora | `HH:MM` |
-| ≤ 14 días | Por día | `Lun 1`, `Mar 2`, etc. |
-| ≤ 60 días | Por semana | `Sem 1`, `Sem 2`, etc. |
-| > 60 días | Por mes | `Ene`, `Feb`, etc. |
+**Query Params**: `period` (DAY|WEEK|MONTH|YEAR), `start`, `end`
+**Retorna**: `JSON`
 
 #### Respuesta
 ```json
@@ -129,6 +120,52 @@ El sistema determina automáticamente la granularidad según el tamaño del rang
   { "label": "Mar 2", "sales": 890.00 }
 ]
 ```
+
+---
+
+### 4. Métodos de Pago (Efectivo vs QR)
+
+**Endpoint**: `GET /api/reports/payment-methods`
+**Controller**: `ReportsController`
+**Acceso**: ADMIN
+**Query Params**: `period` (DAY|WEEK|MONTH|YEAR), `start`, `end`
+**Retorna**: `JSON`
+
+#### Respuesta
+```json
+[
+  { "label": "Lun 1", "efectivo": 1000.00, "qr": 250.50 },
+  { "label": "Mar 2", "efectivo": 600.00, "qr": 290.00 }
+]
+```
+
+---
+
+### 5. Tipos de Pedido (Mesa vs Llevar)
+
+**Endpoint**: `GET /api/reports/order-types`
+**Controller**: `ReportsController`
+**Acceso**: ADMIN
+**Query Params**: `period` (DAY|WEEK|MONTH|YEAR), `start`, `end`
+**Retorna**: `JSON`
+
+#### Respuesta
+```json
+[
+  { "label": "Lun 1", "mesa": 15, "llevar": 8 },
+  { "label": "Mar 2", "mesa": 12, "llevar": 10 }
+]
+```
+
+#### Auto-agrupación por Rango
+El sistema determina automáticamente la granularidad según el tamaño del rango o el periodo predefinido:
+
+| Rango / Periodo | Agrupación | Formato Label |
+| :--- | :--- | :--- |
+| DAY | Por hora | `HH:MM` |
+| WEEK / < 14 días | Por día | `Lun 1`, `Mar 2`, etc. |
+| MONTH / ≤ 60 días | Por semana | `Sem 1`, `Sem 2`, etc. |
+| YEAR / > 60 días | Por mes | `Ene`, `Feb`, etc. |
 
 > [!IMPORTANT]
 > Las fechas se parsean como **hora local** (no UTC). `'2026-03-01'` se interpreta como `2026-03-01T00:00:00` en América/La_Paz. Esto es intencional para consistencia con la zona horaria del servidor.
@@ -150,4 +187,4 @@ ReportsModule
 
 ---
 
-**Versión:** 3.0 | **Actualizado:** 2026-04-14
+**Versión:** 3.1 | **Actualizado:** 2026-05-05

@@ -1,20 +1,25 @@
 import { Injectable } from '@nestjs/common';
 import { v2 as cloudinary } from 'cloudinary';
-import { UploadApiResponse, UploadApiErrorResponse } from 'cloudinary';
+import { UploadApiResponse } from 'cloudinary';
 import { Readable } from 'stream';
 
 @Injectable()
 export class CloudinaryService {
-
   async uploadImage(
     file: Express.Multer.File,
     folder = 'products',
+    maxWidth = 800,
+    maxHeight = 800,
   ): Promise<UploadApiResponse> {
     return new Promise((resolve, reject) => {
       const upload = cloudinary.uploader.upload_stream(
         {
           folder,
           resource_type: 'image',
+          transformation: [
+            { width: maxWidth, height: maxHeight, crop: 'limit' },
+            { format: 'webp', quality: 'auto' },
+          ],
         },
         (error, result) => {
           if (error) return reject(error);
@@ -56,4 +61,3 @@ export class CloudinaryService {
     return folder ? `${folder}/${publicId}` : publicId;
   }
 }
-

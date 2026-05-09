@@ -219,6 +219,22 @@ TypeOrmModule.forRootAsync({
 - `dropSchema: true` solo con `DB_DROP_SCHEMA=true` — permite `npm run db:fresh`.
 - `autoLoadEntities: true` — carga automáticamente todas las entidades registradas en módulos.
 
+## 📺 Display Público (TV Menu)
+
+API pública para que dispositivos tipo TV o pantallas externas consulten la configuración del menú sin necesidad de autenticación JWT.
+
+### Endpoint: `GET /api/display/:token`
+
+- **Auth**: Público (sin JWT).
+- **Parámetro**: `token` (Código de 6 caracteres).
+- **Cache**: No tiene caché en el servidor (consultas directas a BD), pero se recomienda caché en el cliente.
+
+### Flujo de Datos
+1. La TV solicita datos usando el código de acceso.
+2. El servidor valida que el token exista y la configuración esté `isActive = true`.
+3. El servidor obtiene los productos activos de la categoría configurada (o todos si no hay categoría).
+4. Retorna la configuración visual y la lista de productos simplificada.
+
 ---
 
-**Versión:** 3.0 | **Actualizado:** 2026-04-14
+**Versión:** 3.1 | **Actualizado:** 2026-05-05

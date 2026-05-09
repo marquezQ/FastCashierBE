@@ -172,6 +172,21 @@ Cuando un pedido pasa a estado `READY` en la cocina, el frontend solicita audio 
 - Se pueden agrupar productos por categoría con `GET /api/products/grouped-by-category` (todos) o `GET /api/products/active-grouped` (solo activos).
 - La búsqueda de productos `GET /api/products/search?q=...` busca por `name`, `code` y `description` (LIKE).
 
+## 📺 Configuraciones de Pantalla TV (Display)
+
+### 1. Gestión de Pantallas (Admin)
+- Las configuraciones de pantalla permiten personalizar qué productos y cómo se muestran en TVs externas.
+- **Access Token**: Al crear una configuración, el servidor genera un `accessToken` único de 6 caracteres alfanuméricos.
+  - El alfabeto excluye caracteres ambiguos (`0`, `O`, `1`, `I`, `L`) para facilitar su escritura manual en la TV.
+- **Categorización**: Se puede configurar una categoría específica o dejarla como `null` para mostrar todos los productos del menú.
+- **Personalización Visual**: Se pueden configurar el intervalo de rotación (3-60s), tipo de transición (`slide`, `fade`, `zoom`), mostrar/ocultar precios y descripciones, y la cantidad de productos por slide (1-6).
+
+### 2. Acceso Público (TV)
+- El endpoint `GET /api/display/{token}` es **público** (sin JWT).
+- Solo permite acceso si `isActive = true`. Si la configuración está desactivada, devuelve `404 Not Found`.
+- Los datos devueltos están filtrados para la TV: solo productos activos de la categoría seleccionada (o todos si no hay categoría).
+- El servidor **no** expone el `accessToken` ni campos internos (`isActive`, `createdAt`) en la respuesta pública por seguridad.
+
 ---
 
-**Versión:** 3.0 | **Actualizado:** 2026-04-14
+**Versión:** 3.1 | **Actualizado:** 2026-05-05
