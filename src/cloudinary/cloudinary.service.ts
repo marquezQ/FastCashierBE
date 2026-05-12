@@ -3,10 +3,14 @@ import { v2 as cloudinary } from 'cloudinary';
 import { UploadApiResponse } from 'cloudinary';
 import { Readable } from 'stream';
 
+interface UploadableFile {
+  buffer: Buffer;
+}
+
 @Injectable()
 export class CloudinaryService {
   async uploadImage(
-    file: Express.Multer.File,
+    file: UploadableFile,
     folder = 'products',
     maxWidth = 800,
     maxHeight = 800,
