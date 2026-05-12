@@ -3,10 +3,14 @@ import { v2 as cloudinary } from 'cloudinary';
 import { UploadApiResponse } from 'cloudinary';
 import { Readable } from 'stream';
 
+interface UploadableFile {
+  buffer: Buffer;
+}
+
 @Injectable()
 export class CloudinaryService {
   async uploadImage(
-    file: Express.Multer.File,
+    file: UploadableFile,
     folder = 'products',
     maxWidth = 800,
     maxHeight = 800,
@@ -16,10 +20,8 @@ export class CloudinaryService {
         {
           folder,
           resource_type: 'image',
-          transformation: [
-            { width: maxWidth, height: maxHeight, crop: 'limit' },
-            { format: 'webp', quality: 'auto' },
-          ],
+          format: 'webp',
+          transformation: [{ width: maxWidth, height: maxHeight, crop: 'limit', quality: 'auto' }],
         },
         (error, result) => {
           if (error) return reject(error);

@@ -8,13 +8,9 @@ import { CategoriesModule } from '../categories/categories.module';
 import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Product, Category]),
-    CategoriesModule,
-    CloudinaryModule,
-  ],
+  imports: [TypeOrmModule.forFeature([Product, Category]), CategoriesModule, CloudinaryModule],
   controllers: [ProductsController],
   providers: [ProductsService],
   exports: [ProductsService],
 })
-export class ProductsModule { }
+export class ProductsModule {}

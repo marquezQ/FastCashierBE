@@ -24,11 +24,9 @@ export class CashierSessionsService {
     private readonly sessionRepository: Repository<CashierSession>,
     @InjectRepository(Order)
     private readonly orderRepository: Repository<Order>,
-  ) { }
+  ) {}
 
-  async create(
-    createSessionDto: CreateCashierSessionDto,
-  ): Promise<CashierSession> {
+  async create(createSessionDto: CreateCashierSessionDto): Promise<CashierSession> {
     // Verificar si el usuario ya tiene una sesión abierta
     const openSession = await this.sessionRepository.findOne({
       where: {
@@ -58,7 +56,7 @@ export class CashierSessionsService {
     // Lógica de filtrado por fecha
     if (query?.period || query?.startDate) {
       let startDate: Date;
-      let endDate: Date = query?.endDate ? new Date(query.endDate + 'T00:00:00') : new Date();
+      const endDate: Date = query?.endDate ? new Date(query.endDate + 'T00:00:00') : new Date();
 
       // Ajustar fin del día para el endDate si existe
       if (query?.endDate) {
@@ -134,10 +132,7 @@ export class CashierSessionsService {
     });
   }
 
-  async closeSession(
-    id: number,
-    closeSessionDto: CloseCashierSessionDto,
-  ): Promise<CashierSession> {
+  async closeSession(id: number, closeSessionDto: CloseCashierSessionDto): Promise<CashierSession> {
     const session = await this.findOne(id);
 
     if (session.status === 'CLOSED') {
@@ -147,7 +142,7 @@ export class CashierSessionsService {
     // Calcular diferencia total (efectivo + QR)
     const expectedCashTotal = Number(session.initialAmount) + Number(session.totalCash);
     const expectedQrTotal = Number(session.totalQr);
-    
+
     const cashDifference = closeSessionDto.closingCashAmount - expectedCashTotal;
     const qrDifference = closeSessionDto.closingQrAmount - expectedQrTotal;
 
@@ -165,10 +160,7 @@ export class CashierSessionsService {
     return await this.sessionRepository.save(session);
   }
 
-  async update(
-    id: number,
-    updateSessionDto: UpdateCashierSessionDto,
-  ): Promise<CashierSession> {
+  async update(id: number, updateSessionDto: UpdateCashierSessionDto): Promise<CashierSession> {
     const session = await this.findOne(id);
 
     if (session.status === 'CLOSED') {
@@ -218,8 +210,7 @@ export class CashierSessionsService {
         expectedTotal,
         actualCashTotal: session.closingCashAmount,
         actualQrTotal: session.closingQrAmount,
-        actualTotal:
-          (session.closingCashAmount || 0) + (session.closingQrAmount || 0),
+        actualTotal: (session.closingCashAmount || 0) + (session.closingQrAmount || 0),
         difference: session.difference,
         status: session.status,
       },
@@ -259,9 +250,7 @@ export class CashierSessionsService {
 
     // Calculate average order value (handle division by zero)
     const averageOrderValue =
-      session.orderCount > 0
-        ? Number(session.totalSales) / session.orderCount
-        : 0;
+      session.orderCount > 0 ? Number(session.totalSales) / session.orderCount : 0;
 
     // Build responsible person information
     const responsiblePerson: ResponsiblePersonDto = {
@@ -295,15 +284,11 @@ export class CashierSessionsService {
     const session = await this.findOne(id);
 
     if (session.status === 'OPEN') {
-      throw new BadRequestException(
-        'Cannot delete an open session. Close it first.',
-      );
+      throw new BadRequestException('Cannot delete an open session. Close it first.');
     }
 
     if (session.orderCount > 0) {
-      throw new BadRequestException(
-        'Cannot delete session with registered orders',
-      );
+      throw new BadRequestException('Cannot delete session with registered orders');
     }
 
     await this.sessionRepository.remove(session);
@@ -340,9 +325,7 @@ export class CashierSessionsService {
     const session = await this.findOne(sessionId);
 
     if (session.status === 'CLOSED') {
-      throw new BadRequestException(
-        'Cannot deduct orders from a closed session',
-      );
+      throw new BadRequestException('Cannot deduct orders from a closed session');
     }
 
     if (paymentMethod === 'CASH') {

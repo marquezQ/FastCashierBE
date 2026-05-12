@@ -22,9 +22,7 @@ export class OrderDetailsService {
       const product = products.find((p) => p.idProduct === item.productId);
 
       if (!product) {
-        throw new NotFoundException(
-          `Product with ID ${item.productId} not found`,
-        );
+        throw new NotFoundException(`Product with ID ${item.productId} not found`);
       }
 
       // Usar el precio actual del producto
@@ -74,9 +72,7 @@ export class OrderDetailsService {
     const subtotal = items.reduce((sum, item) => {
       const product = products.find((p) => p.idProduct === item.productId);
       if (!product) {
-        throw new NotFoundException(
-          `Product with ID ${item.productId} not found`,
-        );
+        throw new NotFoundException(`Product with ID ${item.productId} not found`);
       }
       return sum + item.quantity * Number(product.price);
     }, 0);

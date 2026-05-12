@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  Logger,
-  InternalServerErrorException,
-  OnModuleInit,
-} from '@nestjs/common';
+import { Injectable, Logger, InternalServerErrorException, OnModuleInit } from '@nestjs/common';
 
 @Injectable()
 export class TtsService implements OnModuleInit {
@@ -40,10 +35,7 @@ export class TtsService implements OnModuleInit {
       this.logger.debug(`Texto a sintetizar: "${texto}"`);
 
       const tts = new this.MsEdgeTTS();
-      await tts.setMetadata(
-        this.voz,
-        this.OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3,
-      );
+      await tts.setMetadata(this.voz, this.OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
 
       return new Promise<Buffer>((resolve, reject) => {
         const chunks: Buffer[] = [];
@@ -70,10 +62,7 @@ export class TtsService implements OnModuleInit {
         });
       });
     } catch (error) {
-      this.logger.error(
-        `Error generando audio para pedido #${numero}`,
-        error,
-      );
+      this.logger.error(`Error generando audio para pedido #${numero}`, error);
       throw new InternalServerErrorException('No se pudo generar el audio');
     }
   }

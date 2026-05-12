@@ -23,16 +23,9 @@ import { OrdersModule } from '../../orders/orders.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([
-      Role,
-      User,
-      Category,
-      Product,
-      CashierSession,
-      Order
-    ]),
+    TypeOrmModule.forFeature([Role, User, Category, Product, CashierSession, Order]),
     CashierSessionsModule,
-    OrdersModule
+    OrdersModule,
   ],
   providers: [
     MasterSeederService,

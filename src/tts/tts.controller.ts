@@ -1,11 +1,4 @@
-import {
-  Controller,
-  Get,
-  Delete,
-  Param,
-  Res,
-  BadRequestException,
-} from '@nestjs/common';
+import { Controller, Get, Delete, Param, Res, BadRequestException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { TtsService } from './tts.service';
@@ -33,16 +26,11 @@ export class TtsController {
   })
   @ApiResponse({ status: 400, description: 'Número de pedido inválido' })
   @ApiResponse({ status: 500, description: 'Error generando el audio' })
-  async getAudioPedido(
-    @Param('numero') numero: string,
-    @Res() res: Response,
-  ): Promise<void> {
+  async getAudioPedido(@Param('numero') numero: string, @Res() res: Response): Promise<void> {
     const n = Number(numero);
 
     if (!Number.isInteger(n) || n < 1 || n > 9999) {
-      throw new BadRequestException(
-        'El número de pedido debe ser un entero entre 1 y 9999',
-      );
+      throw new BadRequestException('El número de pedido debe ser un entero entre 1 y 9999');
     }
 
     const buffer = await this.ttsService.getAudioPedido(n);

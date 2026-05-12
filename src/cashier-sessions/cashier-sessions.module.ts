@@ -12,4 +12,4 @@ import { ReportsService } from '../reports/reports.service';
   providers: [CashierSessionsService, ReportsService],
   exports: [CashierSessionsService, ReportsService], // Para usar en otros módulos (ventas)
 })
-export class CashierSessionsModule { }
+export class CashierSessionsModule {}

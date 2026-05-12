@@ -57,7 +57,7 @@ export class CreateOrderDto {
 
   @ApiProperty({
     description: 'Monto pagado por el cliente',
-    example: 100.00,
+    example: 100.0,
   })
   @IsNumber()
   @IsPositive()
