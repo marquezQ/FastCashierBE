@@ -21,7 +21,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 @Controller('users')
 @UseGuards(JwtAuthGuard, RolesGuard) //Proteger todo el controlador
 export class UsersController {
-  constructor(private readonly usersService: UsersService) { }
+  constructor(private readonly usersService: UsersService) {}
 
   @Post()
   @Roles('ADMIN') //Solo ADMIN puede crear usuarios
@@ -62,10 +62,7 @@ export class UsersController {
 
   @Patch(':id')
   @Roles('ADMIN') //Solo ADMIN
-  update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() updateUserDto: UpdateUserDto,
-  ) {
+  update(@Param('id', ParseIntPipe) id: number, @Body() updateUserDto: UpdateUserDto) {
     return this.usersService.update(id, updateUserDto);
   }
 

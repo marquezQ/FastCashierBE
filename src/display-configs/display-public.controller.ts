@@ -5,9 +5,7 @@ import { DisplayConfigsService } from './display-configs.service';
 @ApiTags('Display Público')
 @Controller('display')
 export class DisplayPublicController {
-  constructor(
-    private readonly displayConfigsService: DisplayConfigsService,
-  ) {}
+  constructor(private readonly displayConfigsService: DisplayConfigsService) {}
 
   @Get(':token')
   @ApiOperation({

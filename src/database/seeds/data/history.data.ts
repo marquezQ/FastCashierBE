@@ -15,9 +15,9 @@ export const historicalData = [
       orderCount: 5,
       // Esperado en efectivo: 200 (inicial) + 162 (ventas efectivo) = 362
       // Reporta tener 20 Bs menos (-20 de faltante)
-      closingCashAmount: 342, 
+      closingCashAmount: 342,
       closingQrAmount: 209, // QR exacto
-      difference: -20, 
+      difference: -20,
       observations: 'Sesión histórica automatizada - Enero 2026. Faltante de 20 Bs reportado.',
     },
     orders: [
@@ -101,14 +101,14 @@ export const historicalData = [
       initialAmount: 300, // Caja inicial
       openingDate: new Date('2026-02-14T08:00:00.000Z'), // San Valentin
       closingDate: new Date('2026-02-14T18:00:00.000Z'), // Cerrado el mismo día
-      status: 'CLOSED', 
+      status: 'CLOSED',
       totalCash: 286, // (200 + 36 + 50)
       totalQr: 192, // (76 + 116)
       totalSales: 478,
       orderCount: 5,
       // Esperado en efectivo: 300 (inicial) + 286 (ventas) = 586
       // Reporta tener 10 Bs menos (-10 de faltante)
-      closingCashAmount: 576, 
+      closingCashAmount: 576,
       closingQrAmount: 192, // QR exacto
       difference: -10,
       observations: 'Sesión histórica automatizada - Febrero 2026. Faltante de 10 Bs reportado.',

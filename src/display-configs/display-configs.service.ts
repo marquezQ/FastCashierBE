@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { randomBytes } from 'crypto';
@@ -67,9 +63,7 @@ export class DisplayConfigsService {
     });
 
     if (!category) {
-      throw new BadRequestException(
-        `La categoría con ID ${categoryId} no existe`,
-      );
+      throw new BadRequestException(`La categoría con ID ${categoryId} no existe`);
     }
   }
 
@@ -100,9 +94,7 @@ export class DisplayConfigsService {
     });
 
     if (!config) {
-      throw new NotFoundException(
-        `Configuración de pantalla con ID ${id} no encontrada`,
-      );
+      throw new NotFoundException(`Configuración de pantalla con ID ${id} no encontrada`);
     }
 
     // Validar categoryId si se está actualizando
@@ -120,9 +112,7 @@ export class DisplayConfigsService {
     });
 
     if (!config) {
-      throw new NotFoundException(
-        `Configuración de pantalla con ID ${id} no encontrada`,
-      );
+      throw new NotFoundException(`Configuración de pantalla con ID ${id} no encontrada`);
     }
 
     await this.displayConfigRepository.remove(config);

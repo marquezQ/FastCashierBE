@@ -43,10 +43,7 @@ export class RolesController {
 
   @Patch(':id')
   @Roles('ADMIN') //Solo ADMIN
-  update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() updateRoleDto: UpdateRoleDto,
-  ) {
+  update(@Param('id', ParseIntPipe) id: number, @Body() updateRoleDto: UpdateRoleDto) {
     return this.rolesService.update(id, updateRoleDto);
   }
 

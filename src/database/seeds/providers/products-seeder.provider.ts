@@ -31,9 +31,7 @@ export class ProductsSeederProvider {
           { code: productData.code },
           { idCategory: productData.idCategory },
         );
-        this.logger.debug(
-          `Updated category for existing product: ${productData.code}`,
-        );
+        this.logger.debug(`Updated category for existing product: ${productData.code}`);
       }
     }
 

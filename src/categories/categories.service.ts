@@ -14,7 +14,7 @@ export class CategoriesService {
   constructor(
     @InjectRepository(Category)
     private readonly categoryRepository: Repository<Category>,
-  ) { }
+  ) {}
 
   async create(createCategoryDto: CreateCategoryDto): Promise<Category> {
     // Verificar si el nombre ya existe
@@ -74,10 +74,7 @@ export class CategoriesService {
     return category;
   }
 
-  async update(
-    id: number,
-    updateCategoryDto: UpdateCategoryDto,
-  ): Promise<Category> {
+  async update(id: number, updateCategoryDto: UpdateCategoryDto): Promise<Category> {
     const category = await this.findOne(id);
 
     // Si se intenta actualizar el nombre, verificar que no exista

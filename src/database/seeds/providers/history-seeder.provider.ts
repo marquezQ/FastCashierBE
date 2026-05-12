@@ -20,7 +20,7 @@ export class HistorySeederProvider {
     // Usamos los servicios directamente para que se calculen los totales de caja igual que en producción
     private readonly sessionsService: CashierSessionsService,
     private readonly ordersService: OrdersService,
-  ) { }
+  ) {}
 
   async seed(): Promise<void> {
     this.logger.log('Starting Historical Data (Jan/Feb) seeding...');
@@ -56,7 +56,7 @@ export class HistorySeederProvider {
               items: orderData.items,
             });
 
-            // Truco Senior para Fechas Históricas: En lugar de un .update normal que puede fallar 
+            // Truco Senior para Fechas Históricas: En lugar de un .update normal que puede fallar
             // contra los decoradores @CreateDateColumn, forzamos un QuerySQL puro directo a PostgreSQL
             const completedDate = new Date(orderData.orderDate.getTime() + 15 * 60000); // +15 mins
 
@@ -69,11 +69,12 @@ export class HistorySeederProvider {
                    cook_id = ${orderData.cookId}, 
                    preparation_start_date = '${orderData.orderDate.toISOString()}', 
                    completed_date = '${completedDate.toISOString()}' 
-               WHERE id_order = ${createdOrder.idOrder}`
+               WHERE id_order = ${createdOrder.idOrder}`,
             );
-
           } catch (error) {
-            this.logger.error(`Error inserting historical order for ${dataRecord.month}: ${error.message}`);
+            this.logger.error(
+              `Error inserting historical order for ${dataRecord.month}: ${error.message}`,
+            );
           }
         }
 

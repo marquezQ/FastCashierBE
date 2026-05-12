@@ -34,7 +34,7 @@ export class CashierSessionsController {
   constructor(
     private readonly cashierSessionsService: CashierSessionsService,
     private readonly reportsService: ReportsService,
-  ) { }
+  ) {}
 
   @Post()
   @Roles('ADMIN', 'CASHIER') //Solo ADMIN y CASHIER
@@ -49,7 +49,10 @@ export class CashierSessionsController {
   @Get()
   @Roles('ADMIN', 'CASHIER') //Solo ADMIN y CASHIER
   @ApiOperation({ summary: 'Get all cashier sessions with date filters' })
-  @ApiResponse({ status: 200, description: 'Return all sessions (open & closed) based on date filters.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Return all sessions (open & closed) based on date filters.',
+  })
   findAll(@Query() query: FindAllSessionsDto) {
     return this.cashierSessionsService.findAll(query);
   }
@@ -58,10 +61,7 @@ export class CashierSessionsController {
   @Roles('ADMIN', 'CASHIER')
   @ApiOperation({ summary: 'Generate a PDF report for cashier sessions' })
   @ApiResponse({ status: 200, description: 'PDF report generated successfully.' })
-  async generatePdfReport(
-    @Query() query: FindAllSessionsDto,
-    @Res() res: any,
-  ) {
+  async generatePdfReport(@Query() query: FindAllSessionsDto, @Res() res: any) {
     const sessions = await this.cashierSessionsService.findAll(query);
 
     const formatDateStr = (dateStr: string) => {
@@ -148,10 +148,7 @@ export class CashierSessionsController {
   @ApiOperation({ summary: 'Update a session' })
   @ApiParam({ name: 'id', description: 'ID of the session' })
   @ApiResponse({ status: 200, description: 'The session has been successfully updated.' })
-  update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() updateSessionDto: UpdateCashierSessionDto,
-  ) {
+  update(@Param('id', ParseIntPipe) id: number, @Body() updateSessionDto: UpdateCashierSessionDto) {
     return this.cashierSessionsService.update(id, updateSessionDto);
   }
 
@@ -166,7 +163,6 @@ export class CashierSessionsController {
     @Body() closeSessionDto: CloseCashierSessionDto,
   ) {
     const closedSession = await this.cashierSessionsService.closeSession(id, closeSessionDto);
-    
     return {
       message: 'Turno cerrado correctamente',
       summary: {
@@ -182,7 +178,7 @@ export class CashierSessionsController {
         declaredQr: Number(closedSession.closingQrAmount),
         difference: Number(closedSession.difference),
         totalOrders: closedSession.orderCount,
-      }
+      },
     };
   }
 
@@ -201,10 +197,7 @@ export class CashierSessionsController {
   @ApiOperation({ summary: 'Generate a detailed PDF report for a single cashier session' })
   @ApiParam({ name: 'id', description: 'ID of the session' })
   @ApiResponse({ status: 200, description: 'PDF report generated successfully.' })
-  async generateSingleSessionPdfReport(
-    @Param('id', ParseIntPipe) id: number,
-    @Res() res: any,
-  ) {
+  async generateSingleSessionPdfReport(@Param('id', ParseIntPipe) id: number, @Res() res: any) {
     const session = await this.cashierSessionsService.findOne(id);
     const orders = await this.cashierSessionsService.getSessionOrders(id);
 

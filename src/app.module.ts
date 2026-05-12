@@ -59,4 +59,4 @@ import { DisplayConfigsModule } from './display-configs/display-configs.module';
     DisplayConfigsModule,
   ],
 })
-export class AppModule { }
+export class AppModule {}

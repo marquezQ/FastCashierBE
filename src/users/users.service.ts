@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  ConflictException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
@@ -14,7 +10,7 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-  ) { }
+  ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
     // Verificar si el email ya existe
@@ -79,14 +75,7 @@ export class UsersService {
   async findByEmail(email: string): Promise<User | null> {
     return await this.userRepository.findOne({
       where: { email },
-      select: [
-        'idUser',
-        'fullName',
-        'email',
-        'passwordHash',
-        'isActive',
-        'roleId',
-      ],
+      select: ['idUser', 'fullName', 'email', 'passwordHash', 'isActive', 'roleId'],
     });
   }
 

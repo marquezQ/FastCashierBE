@@ -11,12 +11,7 @@ import {
   HttpStatus,
   UseGuards,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { DisplayConfigsService } from './display-configs.service';
 import { CreateDisplayConfigDto, UpdateDisplayConfigDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -28,9 +23,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 @Controller('display-configs')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class DisplayConfigsController {
-  constructor(
-    private readonly displayConfigsService: DisplayConfigsService,
-  ) {}
+  constructor(private readonly displayConfigsService: DisplayConfigsService) {}
 
   @Post()
   @Roles('ADMIN')
@@ -72,10 +65,7 @@ export class DisplayConfigsController {
   @ApiResponse({ status: 401, description: 'No autenticado' })
   @ApiResponse({ status: 403, description: 'Sin permisos (requiere ADMIN)' })
   @ApiResponse({ status: 404, description: 'Configuración no encontrada' })
-  update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() updateDto: UpdateDisplayConfigDto,
-  ) {
+  update(@Param('id', ParseIntPipe) id: number, @Body() updateDto: UpdateDisplayConfigDto) {
     return this.displayConfigsService.update(id, updateDto);
   }
 

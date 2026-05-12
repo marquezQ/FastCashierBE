@@ -12,4 +12,4 @@ import { User } from '../users/entities/user.entity';
   controllers: [DashboardController],
   providers: [DashboardService],
 })
-export class DashboardModule { }
+export class DashboardModule {}

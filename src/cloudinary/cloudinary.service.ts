@@ -20,10 +20,8 @@ export class CloudinaryService {
         {
           folder,
           resource_type: 'image',
-          transformation: [
-            { width: maxWidth, height: maxHeight, crop: 'limit' },
-            { format: 'webp', quality: 'auto' },
-          ],
+          format: 'webp',
+          transformation: [{ width: maxWidth, height: maxHeight, crop: 'limit', quality: 'auto' }],
         },
         (error, result) => {
           if (error) return reject(error);

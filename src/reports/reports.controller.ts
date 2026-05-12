@@ -1,11 +1,6 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ReportsService } from './reports.service';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiQuery,
-  ApiResponse,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -14,14 +9,29 @@ import { Roles } from '../auth/decorators/roles.decorator';
 @Controller('reports')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ReportsController {
-  constructor(private readonly reportsService: ReportsService) { }
+  constructor(private readonly reportsService: ReportsService) {}
 
   @Get('sales')
   @Roles('ADMIN')
   @ApiOperation({ summary: 'Obtener rendimiento de ventas' })
-  @ApiQuery({ name: 'period', required: false, enum: ['DAY', 'WEEK', 'MONTH', 'YEAR'], description: 'Periodo de agrupación predefinido' })
-  @ApiQuery({ name: 'start', required: false, description: 'Fecha de inicio (YYYY-MM-DD)', example: '2024-03-01' })
-  @ApiQuery({ name: 'end', required: false, description: 'Fecha de fin (YYYY-MM-DD)', example: '2024-03-12' })
+  @ApiQuery({
+    name: 'period',
+    required: false,
+    enum: ['DAY', 'WEEK', 'MONTH', 'YEAR'],
+    description: 'Periodo de agrupación predefinido',
+  })
+  @ApiQuery({
+    name: 'start',
+    required: false,
+    description: 'Fecha de inicio (YYYY-MM-DD)',
+    example: '2024-03-01',
+  })
+  @ApiQuery({
+    name: 'end',
+    required: false,
+    description: 'Fecha de fin (YYYY-MM-DD)',
+    example: '2024-03-12',
+  })
   @ApiResponse({ status: 200, description: 'Datos de ventas agrupados.' })
   @ApiResponse({ status: 401, description: 'No autorizado.' })
   async getSalesPerformance(
@@ -35,9 +45,24 @@ export class ReportsController {
   @Get('payment-methods')
   @Roles('ADMIN')
   @ApiOperation({ summary: 'Obtener métodos de pago (Efectivo vs QR)' })
-  @ApiQuery({ name: 'period', required: false, enum: ['DAY', 'WEEK', 'MONTH', 'YEAR'], description: 'Periodo de agrupación predefinido' })
-  @ApiQuery({ name: 'start', required: false, description: 'Fecha de inicio (YYYY-MM-DD)', example: '2024-03-01' })
-  @ApiQuery({ name: 'end', required: false, description: 'Fecha de fin (YYYY-MM-DD)', example: '2024-03-12' })
+  @ApiQuery({
+    name: 'period',
+    required: false,
+    enum: ['DAY', 'WEEK', 'MONTH', 'YEAR'],
+    description: 'Periodo de agrupación predefinido',
+  })
+  @ApiQuery({
+    name: 'start',
+    required: false,
+    description: 'Fecha de inicio (YYYY-MM-DD)',
+    example: '2024-03-01',
+  })
+  @ApiQuery({
+    name: 'end',
+    required: false,
+    description: 'Fecha de fin (YYYY-MM-DD)',
+    example: '2024-03-12',
+  })
   @ApiResponse({ status: 200, description: 'Datos de métodos de pago.' })
   @ApiResponse({ status: 401, description: 'No autorizado.' })
   async getPaymentMethodsPerformance(
@@ -51,9 +76,24 @@ export class ReportsController {
   @Get('order-types')
   @Roles('ADMIN')
   @ApiOperation({ summary: 'Obtener tipos de pedido (Mesa vs Llevar)' })
-  @ApiQuery({ name: 'period', required: false, enum: ['DAY', 'WEEK', 'MONTH', 'YEAR'], description: 'Periodo de agrupación predefinido' })
-  @ApiQuery({ name: 'start', required: false, description: 'Fecha de inicio (YYYY-MM-DD)', example: '2024-03-01' })
-  @ApiQuery({ name: 'end', required: false, description: 'Fecha de fin (YYYY-MM-DD)', example: '2024-03-12' })
+  @ApiQuery({
+    name: 'period',
+    required: false,
+    enum: ['DAY', 'WEEK', 'MONTH', 'YEAR'],
+    description: 'Periodo de agrupación predefinido',
+  })
+  @ApiQuery({
+    name: 'start',
+    required: false,
+    description: 'Fecha de inicio (YYYY-MM-DD)',
+    example: '2024-03-01',
+  })
+  @ApiQuery({
+    name: 'end',
+    required: false,
+    description: 'Fecha de fin (YYYY-MM-DD)',
+    example: '2024-03-12',
+  })
   @ApiResponse({ status: 200, description: 'Datos de tipos de pedido.' })
   @ApiResponse({ status: 401, description: 'No autorizado.' })
   async getOrderTypesPerformance(

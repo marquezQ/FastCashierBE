@@ -19,7 +19,7 @@ export class ProductsService {
     @InjectRepository(Category)
     private readonly categoryRepository: Repository<Category>,
     private readonly cloudinaryService: CloudinaryService,
-  ) { }
+  ) {}
 
   async create(createProductDto: CreateProductDto, file?: Express.Multer.File): Promise<Product> {
     // Verificar si el código ya existe
@@ -103,7 +103,6 @@ export class ProductsService {
     updateProductDto: UpdateProductDto,
     file?: Express.Multer.File,
   ): Promise<Product> {
-
     // 1. Buscar producto
     const product = await this.findOne(id);
 
@@ -170,9 +169,7 @@ export class ProductsService {
     const product = await this.findOne(productId);
 
     if (!product.isActive) {
-      throw new BadRequestException(
-        `Product "${product.name}" is not available`,
-      );
+      throw new BadRequestException(`Product "${product.name}" is not available`);
     }
 
     return product;
@@ -187,9 +184,7 @@ export class ProductsService {
       .getMany();
 
     if (products.length !== ids.length) {
-      throw new NotFoundException(
-        'Some products were not found or are inactive',
-      );
+      throw new NotFoundException('Some products were not found or are inactive');
     }
 
     return products;
@@ -246,12 +241,9 @@ export class ProductsService {
   async findActiveGroupedByCategory(): Promise<any> {
     const categories = await this.categoryRepository
       .createQueryBuilder('category')
-      .leftJoinAndSelect(
-        'category.products',
-        'product',
-        'product.isActive = :isActive',
-        { isActive: true },
-      )
+      .leftJoinAndSelect('category.products', 'product', 'product.isActive = :isActive', {
+        isActive: true,
+      })
       .orderBy('category.order', 'ASC')
       .getMany();
 

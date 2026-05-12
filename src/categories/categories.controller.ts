@@ -15,7 +15,7 @@ import { CreateCategoryDto, UpdateCategoryDto } from './dto';
 
 @Controller('categories')
 export class CategoriesController {
-  constructor(private readonly categoriesService: CategoriesService) { }
+  constructor(private readonly categoriesService: CategoriesService) {}
 
   @Post()
   create(@Body() createCategoryDto: CreateCategoryDto) {
@@ -51,10 +51,7 @@ export class CategoriesController {
   }
 
   @Patch(':id')
-  update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() updateCategoryDto: UpdateCategoryDto,
-  ) {
+  update(@Param('id', ParseIntPipe) id: number, @Body() updateCategoryDto: UpdateCategoryDto) {
     return this.categoriesService.update(id, updateCategoryDto);
   }
 

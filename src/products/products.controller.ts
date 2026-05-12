@@ -24,16 +24,13 @@ import { Roles } from '../auth/decorators/roles.decorator';
 @Controller('products')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ProductsController {
-  constructor(private readonly productsService: ProductsService) { }
+  constructor(private readonly productsService: ProductsService) {}
 
   @Post()
   @Roles('ADMIN')
   @UseInterceptors(FileInterceptor('image'))
   @HttpCode(HttpStatus.CREATED)
-  create(
-    @Body() createProductDto: CreateProductDto,
-    @UploadedFile() file?: Express.Multer.File,
-  ) {
+  create(@Body() createProductDto: CreateProductDto, @UploadedFile() file?: Express.Multer.File) {
     return this.productsService.create(createProductDto, file);
   }
 
