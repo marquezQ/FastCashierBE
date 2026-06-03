@@ -1,98 +1,280 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# FastCashier — Backend API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+> API REST del sistema de punto de venta (POS) para negocio de comida rápida, construida con **NestJS**, **TypeORM** y **PostgreSQL**.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+## 📋 Tabla de Contenidos
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- [Descripción](#descripción)
+- [Tech Stack](#tech-stack)
+- [Arquitectura de Módulos](#arquitectura-de-módulos)
+- [Requisitos Previos](#requisitos-previos)
+- [Guía de Instalación](#guía-de-instalación)
+- [Variables de Entorno](#variables-de-entorno)
+- [Scripts Disponibles](#scripts-disponibles)
+- [Documentación API (Swagger)](#documentación-api-swagger)
+- [Funcionalidades Principales](#funcionalidades-principales)
+- [WebSockets](#websockets)
+- [Integraciones Externas](#integraciones-externas)
 
-## Project setup
+---
 
-```bash
-$ npm install
+## Descripción
+
+**FastCashierBE** es el backend de un sistema POS completo para un restaurante de comida rápida (pollo broaster). Gestiona el ciclo de vida completo de las órdenes — desde la toma en caja hasta la entrega en cocina — con comunicación en tiempo real vía WebSockets, reportes en PDF, anuncios de voz (TTS) y un sistema de pantallas TV para el menú.
+
+**Roles del sistema:**
+| Rol | Responsabilidades |
+|---|---|
+| `ADMIN` | Gestión completa: usuarios, productos, categorías, reportes, dashboard |
+| `CASHIER` | Apertura/cierre de turno, creación y cancelación de órdenes |
+| `KITCHEN` | Vista y cambio de estado de órdenes (monitor de cocina) |
+
+---
+
+## Tech Stack
+
+| Tecnología | Versión | Uso |
+|---|---|---|
+| **Node.js** | v20+ | Runtime |
+| **NestJS** | ^11 | Framework principal (DI, Guards, Pipes, Modules) |
+| **TypeScript** | ^5.7 | Tipado estricto |
+| **TypeORM** | ^0.3.27 | ORM para PostgreSQL |
+| **PostgreSQL** | latest | Base de datos relacional |
+| **Socket.IO** | vía `@nestjs/platform-socket.io` | Tiempo real (cocina ↔ caja) |
+| **Swagger** | ^11 | Documentación API auto-generada |
+| **Cloudinary** | ^2.9 | Almacenamiento de imágenes |
+| **PDFKit** | ^0.17 | Generación de reportes PDF |
+| **msedge-tts** | ^2.0.4 | Text-to-Speech (anuncios de cocina) |
+
+---
+
+## Arquitectura de Módulos
+
+```
+src/
+├── auth/               # JWT + Passport (login, guards, estrategias)
+├── users/              # CRUD de usuarios con roles
+├── roles/              # Entidad y seed de roles
+├── products/           # CRUD de productos + toggle activo + búsqueda
+├── categories/         # Categorías de menú con ordenamiento visual
+├── orders/             # Ciclo de vida de órdenes + dashboard + métricas
+├── order-details/      # Detalles de cada línea de orden
+├── cashier-sessions/   # Turnos de caja: apertura, cierre, arqueo
+├── reports/            # Reportes comparativos (métodos de pago, tipos de orden)
+├── dashboard/          # Métricas consolidadas para el admin
+├── display-configs/    # Configuración de pantallas TV (menú público)
+├── tts/                # Text-to-Speech para anuncios de cocina
+├── cloudinary/         # Manejo de imágenes en la nube
+└── database/           # Seeders iniciales
 ```
 
-## Compile and run the project
+---
+
+## Requisitos Previos
+
+- **Node.js** v20 o superior
+- **npm** v10 o superior
+- **PostgreSQL** corriendo localmente (o conexión remota)
+- (Opcional) Cuenta de **Cloudinary** para manejo de imágenes de productos
+
+---
+
+## Guía de Instalación
+
+### 1. Clonar el repositorio
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+git clone <url-del-repositorio>
+cd FastCashierBE
 ```
 
-## Run tests
+### 2. Instalar dependencias
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+npm install
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### 3. Configurar variables de entorno
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+cp .env.example .env
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+Editar `.env` con tus valores (ver sección [Variables de Entorno](#variables-de-entorno)).
 
-## Resources
+### 4. Levantar la base de datos
 
-Check out a few resources that may come in handy when working with NestJS:
+Asegúrate de que PostgreSQL esté corriendo y que la base de datos especificada en `.env` exista:
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+```sql
+CREATE DATABASE punto_venta_db;
+```
 
-## Support
+> Con `NODE_ENV=development`, TypeORM sincroniza el esquema automáticamente al iniciar.
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+### 5. Correr el proyecto en modo desarrollo
 
-## Stay in touch
+```bash
+npm run start:dev
+```
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+El servidor estará disponible en `http://localhost:3000`.
 
-## License
+### 6. (Opcional) Poblar la base de datos con datos de prueba
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+```bash
+npm run db:fresh
+```
+
+> ⚠️ **¡Cuidado!** Este comando elimina **todas las tablas** y las recrea con datos semilla. Solo usar en desarrollo.
+
+Datos de prueba creados:
+- **Roles**: `ADMIN`, `CASHIER`, `KITCHEN`
+- **Usuarios**: `admin@gmail.com`, `cashier@gmail.com`, `cook@gmail.com` — contraseña: `123456`
+- **Categorías**: COMIDA, REFRESCOS, BEBIDAS CALIENTES, POSTRES
+- **Productos**: 5 productos de ejemplo
+
+---
+
+## Variables de Entorno
+
+Copia `.env.example` a `.env` y completa los valores:
+
+```bash
+# Base de Datos
+DB_HOST=localhost
+DB_PORT=5432
+DB_USERNAME=postgres
+DB_PASSWORD=tu_password
+DB_NAME=punto_venta_db
+
+# JWT
+JWT_SECRET=tu_secreto_super_seguro
+JWT_EXPIRATION=24h
+
+# Servidor
+PORT=3000
+NODE_ENV=development   # "production" para desactivar synchronize
+
+# Solo en desarrollo: elimina y recrea todas las tablas al iniciar
+DB_DROP_SCHEMA=false
+
+# Cloudinary (para imágenes de productos)
+CLOUDINARY_CLOUD_NAME=tu_cloud_name
+CLOUDINARY_API_KEY=tu_api_key
+CLOUDINARY_API_SECRET=tu_api_secret
+```
+
+> **Importante:** `NODE_ENV=development` activa `synchronize: true` en TypeORM, lo que auto-migra el esquema. **Nunca usar en producción.**
+
+---
+
+## Scripts Disponibles
+
+```bash
+# Desarrollo con hot-reload
+npm run start:dev
+
+# Resetear BD + seed (solo desarrollo)
+npm run db:fresh
+
+# Compilar a JavaScript
+npm run build
+
+# Ejecutar en producción (requiere build previo)
+npm run start:prod
+
+# Linting con auto-fix
+npm run lint
+
+# Formatear código con Prettier
+npm run format
+
+# Tests unitarios
+npm run test
+
+# Tests con cobertura
+npm run test:cov
+
+# Tests end-to-end
+npm run test:e2e
+```
+
+---
+
+## Documentación API (Swagger)
+
+Con el servidor corriendo, accede a la documentación interactiva en:
+
+```
+http://localhost:3000/api/docs
+```
+
+Todos los endpoints están documentados con sus DTOs, respuestas y requisitos de autenticación.
+
+---
+
+## Funcionalidades Principales
+
+### 🔐 Autenticación
+- Login con usuario/contraseña → retorna JWT.
+- Guards basados en roles (`@Roles(Role.ADMIN)`, etc.) protegen todos los endpoints.
+
+### 🧾 Órdenes
+- Ciclo de vida completo: `PENDING → IN_PREPARATION → READY → DELIVERED` (o `CANCELLED`).
+- Número de orden generado automáticamente: `ORD-S{sesionId}-{NNN}`.
+- Al crear una orden se congela el precio unitario del producto.
+- Cancelación revierte los totales del turno de caja en tiempo real.
+
+### 🏦 Turnos de Caja (Cashier Sessions)
+- Un cajero solo puede tener **un turno abierto a la vez**.
+- Acumula `totalCash`, `totalQr`, `totalSales` y `orderCount` en tiempo real.
+- Al cerrar genera un arqueo con diferencia entre lo declarado y lo esperado.
+- Soporta filtros de fecha: últimos 7 días, mes actual, rango personalizado.
+
+### 📊 Reportes y Dashboard
+- **Dashboard Admin**: ventas totales, ticket promedio, tiempo promedio de cocina, top productos, desglose por canal (dine-in / takeout).
+- **Reportes PDF**: reporte individual de sesión, reporte comparativo de métodos de pago y tipos de orden.
+- Reportes comparativos con agregación SQL para alto rendimiento.
+
+### 📺 Pantallas TV (Display)
+- El admin crea configuraciones de pantalla con un `accessToken` de 6 caracteres.
+- El endpoint público `GET /api/display/:token` permite que TVs consulten el menú sin autenticación.
+- Configurable: categoría, intervalo de rotación, transición, precios visibles, productos por slide.
+
+---
+
+## WebSockets
+
+El gateway de Socket.IO está disponible en el namespace `/orders`:
+
+```
+ws://localhost:3000/orders
+```
+
+| Evento | Dirección | Descripción |
+|---|---|---|
+| `new_order` | Servidor → Cliente | Se emite al crear una nueva orden |
+| `order_status_updated` | Servidor → Cliente | Se emite al cambiar estado o cancelar |
+| `ping` | Cliente → Servidor | Health check de conexión (responde `pong`) |
+
+---
+
+## Integraciones Externas
+
+### ☁️ Cloudinary
+Almacenamiento de imágenes de productos. Se sube el archivo en memoria (Multer) y se persiste la URL pública en la base de datos. Al actualizar la imagen, la anterior se elimina automáticamente.
+
+### 🔊 Text-to-Speech (Microsoft Edge TTS)
+Cuando un pedido pasa a `READY`, el frontend solicita `GET /api/tts/pedido/:numero`. El servidor genera un MP3 con la voz `es-MX-DaliaNeural` diciendo _"Pedido número N, por favor"_ y lo cachea en memoria.
+
+### 🕐 Zona Horaria
+El sistema fuerza `America/La_Paz` (UTC-4, Bolivia) tanto en el proceso Node.js (`process.env.TZ`) como en la conexión PostgreSQL (`-c timezone=America/La_Paz`).
+
+---
+
+## Licencia
+
+Proyecto privado — todos los derechos reservados.
