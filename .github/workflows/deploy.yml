@@ -2,29 +2,45 @@ name: Deploy Backend
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy en VPS
-        uses: appleboy/ssh-action@v1
+      - name: Deploy Backend en VPS
+        uses: appleboy/ssh-action@v1.2.2
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            set -e  # Aborta inmediatamente si algún comando falla
+            set -e
+
+            echo "========== Verificando conexión SSH =========="
+            whoami
+            hostname
+            pwd
+
+            echo "========== Entrando al proyecto =========="
             cd /var/www/fastcashier/backend
-            
-            # Sincronización estricta sin conflictos
+
+            echo "========== Actualizando código =========="
             git fetch origin main
             git reset --hard origin/main
-            
-            # npm ci garantiza dependencias exactas usando el package-lock.json
+
+            echo "========== Instalando dependencias =========="
             npm ci
-            
-            NODE_OPTIONS="--max-old-space-size=512" npm run build
-            pm2 restart fastcashier-api
+
+            echo "========== Compilando =========="
+            npm run build
+
+            echo "========== Reiniciando PM2 =========="
+            pm2 restart fastcashier-backend
+
+            echo "========== Estado PM2 =========="
+            pm2 ls
+
+            echo "========== Deploy finalizado =========="
