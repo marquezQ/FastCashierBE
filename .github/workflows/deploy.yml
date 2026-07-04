@@ -22,12 +22,9 @@ jobs:
             echo "========== Verificando conexión SSH =========="
             whoami
             hostname
-            pwd
-
-            echo "========== Entrando al proyecto =========="
-            cd /var/www/fastcashier/backend
 
             echo "========== Actualizando código =========="
+            cd /var/www/fastcashier/backend
             git fetch origin main
             git reset --hard origin/main
 
@@ -38,9 +35,9 @@ jobs:
             npm run build
 
             echo "========== Reiniciando PM2 =========="
-            sudo pm2 restart fastcashier-backend
+            pm2 restart fastcashier-backend
 
             echo "========== Estado PM2 =========="
-            sudo pm2 ls
+            pm2 ls
 
             echo "========== Deploy finalizado =========="
