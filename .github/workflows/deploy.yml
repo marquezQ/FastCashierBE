@@ -38,9 +38,9 @@ jobs:
             npm run build
 
             echo "========== Reiniciando PM2 =========="
-            pm2 restart fastcashier-backend
+            sudo pm2 restart fastcashier-backend
 
             echo "========== Estado PM2 =========="
-            pm2 ls
+            sudo pm2 ls
 
             echo "========== Deploy finalizado =========="
