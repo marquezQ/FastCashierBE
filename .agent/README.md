@@ -17,6 +17,7 @@ Bienvenido al contexto modular de **FastCashierBE**. Esta carpeta contiene la do
 | 📡 [**API Standards**](./api-standards.md) | Inventario completo de endpoints (incluyendo TTS, Reports, PDF individual), convenciones REST, DTOs, Swagger. |
 | ⚙️ [**Integrations**](./integrations.md) | WebSocket Gateway (Socket.IO /orders), TTS (msedge-tts), Cloudinary, CORS, zona horaria, PostgreSQL. |
 | 📄 [**Reports**](./reports.md) | PDFs de turnos (multi-sesión e individual con órdenes), rendimiento de ventas (auto-agrupación), moneda Bs./- |
+| 🖥️ [**Deployment**](./deployment.md) | **Guía multi-cliente en VPS**: cómo onboardear un nuevo cliente (BD, PM2, NGINX, SSL), scripts de actualización, tabla de instancias activas. |
 
 ---
 
@@ -45,15 +46,29 @@ FastCashierBE/
 
 ---
 
-## 🔑 Credenciales por Defecto (Seed)
+## 🔑 Sistema de Seeders (SEED_MODE)
 
+El seeder tiene dos modos configurados en `.env`:
+
+### `SEED_MODE=demo` (instancia de demostración)
 | Rol | Email | Contraseña |
 | :--- | :--- | :--- |
 | Admin | `admin@gmail.com` | `123456` |
+| Admin | `fernando@gmail.com` | `123456` |
 | Cajero | `cashier@gmail.com` | `123456` |
 | Cocinero | `cook@gmail.com` | `123456` |
 
-> Los seeders se ejecutan automáticamente al iniciar con `DB_DROP_SCHEMA=true` (`npm run db:fresh`). Son idempotentes.
+Además siembra: categorías, productos con imágenes, historial de órdenes (enero/febrero).
+
+### `SEED_MODE=production` (cliente real)
+Solo siembra: los 3 roles del sistema + 2 admins leídos del `.env`:
+```env
+SEED_ADMIN_EMAIL=tu@email.com       # tú (soporte técnico)
+SEED_OWNER_EMAIL=dueno@negocio.com  # el dueño del negocio
+```
+El dueño crea cajeros, cocineros, categorías y productos desde el panel.
+
+> ⚠️ Los seeders solo se ejecutan con `DB_DROP_SCHEMA=true` + `NODE_ENV=development`. Ver [deployment.md](./deployment.md) para el flujo completo de onboarding.
 
 ---
 
@@ -94,4 +109,4 @@ Antes de trabajar en cualquier funcionalidad, lee el archivo correspondiente:
 
 ---
 
-**Versión:** 3.1 | **Actualizado:** 2026-04-24 | **Revisado por:** Antigravity (análisis completo del código fuente)
+**Versión:** 3.2 | **Actualizado:** 2026-07-06 | **Revisado por:** Antigravity

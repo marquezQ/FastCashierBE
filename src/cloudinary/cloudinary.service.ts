@@ -11,7 +11,11 @@ interface UploadableFile {
 export class CloudinaryService {
   async uploadImage(
     file: UploadableFile,
-    folder = 'products',
+    // Si no se especifica, usa CLOUDINARY_FOLDER del .env.
+    // Esto permite que cada instancia del VPS (clienteA, clienteB...) guarde
+    // imágenes en su propia carpeta sin modificar el código fuente.
+    // Configura en .env: CLOUDINARY_FOLDER=primerclienteA/products
+    folder = process.env.CLOUDINARY_FOLDER || 'products',
     maxWidth = 800,
     maxHeight = 800,
   ): Promise<UploadApiResponse> {
