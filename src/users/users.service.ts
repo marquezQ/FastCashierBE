@@ -109,4 +109,19 @@ export class UsersService {
       lastAccess: new Date(),
     });
   }
+
+  // Busca por ID incluyendo passwordHash (columna select:false).
+  // Usado exclusivamente por AuthService.changePassword() para verificar la contraseña actual.
+  async findById(id: number): Promise<User | null> {
+    return await this.userRepository
+      .createQueryBuilder('user')
+      .addSelect('user.passwordHash')
+      .where('user.idUser = :id', { id })
+      .getOne();
+  }
+
+  // Actualiza solo el hash de la contraseña. No toca ningún otro campo del perfil.
+  async updatePassword(id: number, newPasswordHash: string): Promise<void> {
+    await this.userRepository.update(id, { passwordHash: newPasswordHash });
+  }
 }

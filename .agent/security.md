@@ -92,6 +92,24 @@ Authorization: Bearer <access_token>
 - Si es válido, adjunta el objeto `user` al `request` para uso en controladores.
 - Si es inválido o está ausente → `401 Unauthorized`.
 
+> [!WARNING]
+> **Estructura de `req.user` en los Controladores:**
+> Debido a la personalización de `JwtStrategy.validate()`, el ID del usuario en `req.user` se inyecta bajo la propiedad **`idUser`** y **NO** como `sub`.
+>
+> **Estructura inyectada:**
+> ```json
+> {
+>   "idUser": 12,
+>   "email": "cajero@gmail.com",
+>   "fullName": "Maria Lopez",
+>   "roleId": 2
+> }
+> ```
+>
+> ❌ **Incorrecto:** `req.user.sub` (retornará `undefined`)
+>  **Correcto:** `req.user.idUser`
+
+
 ### `RolesGuard` (`src/auth/guards/roles.guard.ts`)
 - Compara el `roleId` del usuario autenticado contra los roles requeridos por el decorador `@Roles()`.
 - Mapeo interno: `{ ADMIN: 1, CASHIER: 2, KITCHEN: 3 }`.

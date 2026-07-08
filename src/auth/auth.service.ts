@@ -1,8 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, UnprocessableEntityException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
-import { LoginDto, RegisterDto } from './dto';
+import { LoginDto, RegisterDto, ChangePasswordDto } from './dto';
 import { JwtPayload } from './strategies/jwt.strategy';
 
 @Injectable()
@@ -68,5 +68,27 @@ export class AuthService {
     } catch {
       throw new UnauthorizedException('Invalid token');
     }
+  }
+
+  async changePassword(userId: number, dto: ChangePasswordDto): Promise<{ message: string }> {
+    // Recuperar el usuario con el hash — la columna passwordHash tiene select:false
+    // por eso necesitamos findByEmail que hace el addSelect explícito
+    const user = await this.usersService.findById(userId);
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const isCurrentPasswordValid = await bcrypt.compare(dto.currentPassword, user.passwordHash);
+
+    if (!isCurrentPasswordValid) {
+      // Mensaje genérico: no revelamos si el email existe o cuál campo es incorrecto
+      throw new UnprocessableEntityException('Current password is incorrect');
+    }
+
+    const newPasswordHash = await bcrypt.hash(dto.newPassword, 10);
+    await this.usersService.updatePassword(userId, newPasswordHash);
+
+    return { message: 'Password updated successfully' };
   }
 }

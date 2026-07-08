@@ -5,12 +5,13 @@ import {
   HttpCode,
   HttpStatus,
   Get,
+  Patch,
   UseGuards,
   Request,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { LoginDto, RegisterDto } from './dto';
+import { LoginDto, RegisterDto, ChangePasswordDto } from './dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @ApiTags('Authentication')
@@ -44,5 +45,18 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'No autenticado' })
   getProfile(@Request() req) {
     return req.user;
+  }
+
+  @Patch('change-password')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Cambiar contraseña del usuario autenticado' })
+  @ApiResponse({ status: 200, description: 'Contraseña actualizada exitosamente' })
+  @ApiResponse({ status: 401, description: 'No autenticado' })
+  @ApiResponse({ status: 422, description: 'Contraseña actual incorrecta' })
+  changePassword(@Request() req, @Body() changePasswordDto: ChangePasswordDto) {
+    // req.user.idUser contiene el userId extraído del JWT por JwtAuthGuard
+    return this.authService.changePassword(req.user.idUser, changePasswordDto);
   }
 }
