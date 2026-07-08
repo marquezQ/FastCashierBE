@@ -101,23 +101,34 @@ SEED_OWNER_PASSWORD=password_inicial_para_el_dueno
 
 ### Paso 4 — Primer seed (UNA sola vez)
 
-> ⚠️ Este paso BORRA y recrea la BD. Solo ejecutarlo en la primera instalación.
+> ⚠️ Este paso BORRA y recrea la BD. Solo ejecutarlo en la primera instalación de cada cliente.
 
 ```bash
-# Temporarily override NODE_ENV and DB_DROP_SCHEMA solo para el seed inicial
-NODE_ENV=development DB_DROP_SCHEMA=true npm run start:dev
-
-# Cuando veas en los logs:
-# "====== MASTER SEED FINISHED SUCCESSFULLY ======"
-# Presiona Ctrl+C para detener el proceso.
+# Desde /var/www/fastcashier-primerclienteA/backend
+# El script NO levanta servidor HTTP — solo conecta a la BD, siembra y sale.
+NODE_ENV=development DB_DROP_SCHEMA=true npm run db:seed
 ```
+
+Verás en consola:
+```
+[SeedScript] Iniciando contexto de aplicación (sin servidor HTTP)...
+[MasterSeederService] ====== STARTING MASTER SEED [mode: production] ======
+[RolesSeederProvider]  Roles seeding completed.
+[UsersSeederProvider]  Users seeding completed.
+[CategoriesSeederProvider] Categories seeding completed.
+[MasterSeederService] ====== MASTER SEED FINISHED SUCCESSFULLY ======
+[SeedScript] ✅ Seed completado exitosamente.
+```
+
+El proceso termina solo. **No necesitas Ctrl+C ni cambiar el puerto.**
 
 Después del seed, la BD tendrá:
 - Los 3 roles del sistema (ADMIN, CASHIER, KITCHEN)
 - Tu usuario admin (para soporte técnico)
 - El usuario admin del dueño del negocio
+- Las 4 categorías base (el dueño les asigna sus productos desde el panel)
 
-El dueño puede iniciar sesión y crear: cajeros, cocineros, categorías, productos.
+El dueño inicia sesión y crea: cajeros, cocineros y productos desde el panel.
 
 ### Paso 5 — Build de producción y arranque con PM2
 
@@ -287,6 +298,32 @@ Antes de entregar acceso al cliente, verifica:
 
 ---
 
+## 🌱 Scripts de Seed Disponibles
+
+```bash
+# Seed simple — usa SEED_MODE del .env, sin tocar la BD (no borra datos existentes)
+npm run db:seed
+
+# Seed limpio — BORRA toda la BD y la recrea desde cero, luego siembra
+# ⚠️  DESTRUCTIVO. Úsalo solo en primera instalación o para resetear dev.
+npm run db:fresh
+
+# Override puntual del modo sin editar el .env:
+SEED_MODE=demo npm run db:seed
+SEED_MODE=production npm run db:seed
+
+# Forma completa manual (equivalente a db:fresh):
+NODE_ENV=development DB_DROP_SCHEMA=true npm run db:seed
+```
+
+**¿Por qué necesita `NODE_ENV=development`?**
+El config de TypeORM tiene `synchronize: NODE_ENV !== 'production'`. En modo `development`
+auto-crea las tablas si no existen. En `production` las tablas deben existir ya
+(creadas por un seed previo o migraciones). Para la primera instalación de una instancia
+nueva siempre usa `NODE_ENV=development DB_DROP_SCHEMA=true`.
+
+---
+
 ## 🛠️ Comandos Útiles en el VPS
 
 ```bash
@@ -300,10 +337,10 @@ pm2 logs fastcashier-primerclienteA
 # Reiniciar una instancia
 pm2 restart fastcashier-primerclienteA
 
-# Ver estado del sistema
+# Estado del sistema en tiempo real
 pm2 monit
 ```
 
 ---
 
-**Versión:** 1.0 | **Actualizado:** 2026-07-06
+**Versión:** 1.1 | **Actualizado:** 2026-07-08

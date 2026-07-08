@@ -6,7 +6,8 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "db:fresh": "DB_DROP_SCHEMA=true npm run start:dev",
+    "db:seed": "ts-node -r tsconfig-paths/register src/database/seeds/seed.ts",
+    "db:fresh": "NODE_ENV=development DB_DROP_SCHEMA=true npm run db:seed",
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
