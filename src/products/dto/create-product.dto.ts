@@ -12,15 +12,16 @@ import { Type, Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateProductDto {
-  @ApiProperty({
-    description: 'Código único del producto',
-    example: 'PROD-001',
+  @ApiPropertyOptional({
+    description:
+      'Código único del producto. Si se omite, el backend lo genera automáticamente (formato PRO-NEW-{n}).',
+    example: 'PRO-NEW-001',
     maxLength: 50,
   })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
   @MaxLength(50)
-  code: string;
+  code?: string;
 
   @ApiProperty({
     description: 'Nombre del producto',

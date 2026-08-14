@@ -166,6 +166,8 @@ Cuando un pedido pasa a estado `READY` en la cocina, el frontend solicita audio 
 
 ## 📋 Productos y Categorías
 
+- El código de producto (`code`) es **autogenerado siempre por el backend** al crear: formato `PRO-NEW-{n}` donde `n` = `id_product` con padding a 3 dígitos (ej. `PRO-NEW-001`). El frontend **no** envía el campo `code`.
+- El prefijo `PRO-NEW-` evita colisiones con los códigos legacy `PROD-*` que ya existían en la BD. La unicidad está garantizada porque se basa en el `id_product` autoincremental (PK).
 - Un producto puede ser activado/desactivado con `PATCH /api/products/:id/toggle-active`.
 - No se puede eliminar físicamente un producto que tenga detalles de orden asociados.
 - Las categorías tienen un campo `order` para ordenamiento visual (0 = primera posición).

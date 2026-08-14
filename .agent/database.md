@@ -72,7 +72,7 @@ erDiagram
 | Columna | Tipo | Detalles |
 | :--- | :--- | :--- |
 | `id_product` | PK int | Auto-generado |
-| `code` | varchar(50) | Único. Formato: `PROD-001` |
+| `code` | varchar(50) | Único. **Autogenerado por el backend** formato `PRO-NEW-{n}` (basado en `id_product`). El frontend no lo envía. |
 | `name` | varchar(150) | Nombre del producto |
 | `description` | text | Opcional |
 | `price` | decimal(10,2) | Precio actual de venta |
@@ -84,6 +84,9 @@ erDiagram
 
 **Índices:** Compuesto `(id_category, is_active)` para optimizar queries de productos activos por categoría.  
 **Relaciones:** `N:1 → categories`, `1:N → order_details`
+
+> [!NOTE]
+> El campo `code` NO lo envía el frontend. El backend lo genera siempre al crear con formato `PRO-NEW-{n}` (donde `n` = `id_product` con padding a 3 dígitos, ej. `PRO-NEW-001`). El prefijo `PRO-NEW-` garantiza que nunca colisiona con los códigos legacy `PROD-*` existentes en la BD.
 
 > [!NOTE]
 > No se elimina físicamente un producto con historial de ventas. En su lugar se usa `isActive = false`.

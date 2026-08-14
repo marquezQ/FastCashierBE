@@ -5,6 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { randomBytes } from 'crypto';
 import { Repository, Like } from 'typeorm';
 import { Product } from './entities/product.entity';
 import { CreateProductDto, UpdateProductDto } from './dto';
@@ -22,22 +23,21 @@ export class ProductsService {
   ) {}
 
   async create(createProductDto: CreateProductDto, file?: Express.Multer.File): Promise<Product> {
-    // Verificar si el código ya existe
-    const codeExists = await this.productRepository.findOne({
-      where: { code: createProductDto.code },
-    });
-
-    if (codeExists) {
-      throw new ConflictException('Product code already exists');
-    }
-
     if (file) {
       const result: any = await this.cloudinaryService.uploadImage(file);
       createProductDto.imageUrl = result.secure_url;
     }
 
     const product = this.productRepository.create(createProductDto);
-    return await this.productRepository.save(product);
+
+    // El código SIEMPRE lo genera el backend (el frontend no lo envía)
+    product.code = `PROD-TMP-${Date.now()}-${randomBytes(3).toString('hex')}`;
+
+    const savedProduct = await this.productRepository.save(product);
+
+    // Secuencial y único: basado en el id autoincremental (PRO-NEW-001, PRO-NEW-002, ...)
+    savedProduct.code = `PRO-NEW-${String(savedProduct.idProduct).padStart(3, '0')}`;
+    return await this.productRepository.save(savedProduct);
   }
 
   async findAll(includeInactive = false): Promise<Product[]> {

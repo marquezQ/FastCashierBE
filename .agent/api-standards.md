@@ -126,7 +126,7 @@ app.useGlobalPipes(new ValidationPipe({
 | GET | `/grouped-by-category` | Agrupados (todos) | Todos |
 | GET | `/active-grouped` | Solo activos, agrupados | Todos |
 | GET | `/:id` | Por ID | Todos |
-| POST | `/` | Crear (con imagen multipart) | ADMIN |
+| POST | `/` | Crear (con imagen multipart). `code` es opcional: si se omite, el backend lo genera (`PRO-NEW-{n}`) | ADMIN |
 | PATCH | `/:id` | Actualizar (con imagen) | ADMIN |
 | PATCH | `/:id/toggle-active` | Activar/desactivar | ADMIN |
 | DELETE | `/:id` | Soft-delete | ADMIN |
