@@ -137,13 +137,13 @@ export class DisplayConfigsService {
       // Productos activos de la categoría específica
       products = await this.productRepository.find({
         where: { idCategory: config.categoryId, isActive: true },
-        order: { name: 'ASC' },
+        order: { createdAt: 'ASC' },
       });
     } else {
       // Todos los productos activos
       products = await this.productRepository.find({
         where: { isActive: true },
-        order: { name: 'ASC' },
+        order: { createdAt: 'ASC' },
       });
     }
 

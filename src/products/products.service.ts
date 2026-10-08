@@ -45,21 +45,21 @@ export class ProductsService {
 
     return await this.productRepository.find({
       where: whereCondition,
-      order: { name: 'ASC' },
+      order: { createdAt: 'ASC' },
     });
   }
 
   async findActive(): Promise<Product[]> {
     return await this.productRepository.find({
       where: { isActive: true },
-      order: { name: 'ASC' },
+      order: { createdAt: 'ASC' },
     });
   }
 
   async findInactive(): Promise<Product[]> {
     return await this.productRepository.find({
       where: { isActive: false },
-      order: { name: 'ASC' },
+      order: { createdAt: 'ASC' },
     });
   }
 
@@ -94,7 +94,7 @@ export class ProductsService {
         { code: Like(`%${query}%`), isActive: true },
         { description: Like(`%${query}%`), isActive: true },
       ],
-      order: { name: 'ASC' },
+      order: { createdAt: 'ASC' },
     });
   }
 
@@ -197,7 +197,7 @@ export class ProductsService {
         isActive: true,
       },
       relations: ['category'],
-      order: { name: 'ASC' },
+      order: { createdAt: 'ASC' },
     });
   }
 
@@ -206,16 +206,17 @@ export class ProductsService {
     return await this.productRepository.find({
       where: { isActive: true },
       relations: ['category'],
-      order: {
-        name: 'ASC',
-      },
+      order: { createdAt: 'ASC' },
     });
   }
+
   async findGroupedByCategory(): Promise<any> {
-    const categories = await this.categoryRepository.find({
-      relations: ['products'],
-      order: { order: 'ASC' },
-    });
+    const categories = await this.categoryRepository
+      .createQueryBuilder('category')
+      .leftJoinAndSelect('category.products', 'product')
+      .orderBy('category.order', 'ASC')
+      .addOrderBy('product.createdAt', 'ASC')
+      .getMany();
 
     return categories.map((category) => ({
       idCategory: category.idCategory,
@@ -245,6 +246,7 @@ export class ProductsService {
         isActive: true,
       })
       .orderBy('category.order', 'ASC')
+      .addOrderBy('product.createdAt', 'ASC')
       .getMany();
 
     return categories.map((category) => ({

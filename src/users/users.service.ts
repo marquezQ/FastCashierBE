@@ -39,7 +39,7 @@ export class UsersService {
     return await this.userRepository.find({
       //where: { isActive: true },
       relations: ['role'],
-      order: { createdAt: 'DESC' },
+      order: { createdAt: 'ASC' },
     });
   }
 
@@ -47,7 +47,7 @@ export class UsersService {
     return await this.userRepository.find({
       where: { isActive: true },
       relations: ['role'],
-      order: { createdAt: 'DESC' },
+      order: { createdAt: 'ASC' },
     });
   }
 
@@ -55,7 +55,7 @@ export class UsersService {
     return await this.userRepository.find({
       where: { isActive: false },
       relations: ['role'],
-      order: { createdAt: 'DESC' },
+      order: { createdAt: 'ASC' },
     });
   }
 

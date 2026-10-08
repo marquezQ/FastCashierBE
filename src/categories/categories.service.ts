@@ -43,7 +43,7 @@ export class CategoriesService {
     return await this.categoryRepository.find({
       where: { isActive: true },
       relations: ['products'],
-      order: { order: 'ASC' },
+      order: { order: 'ASC', products: { createdAt: 'ASC' } },
     });
   }
 
