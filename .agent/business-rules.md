@@ -105,6 +105,17 @@ DELIVERED  ←── completedDate se fija en DELIVERED         │
 - La cocina solamente puede operar en el endpoint `PATCH /api/orders/:id/status`.
 - **Se emite evento WebSocket `order_status_updated`** con la orden actualizada después de cualquier cambio de estado.
 
+**Retroceso manual de estado (`PATCH /api/orders/:id/status/revert`):**
+- Mueve la orden exactamente un estado hacia atrás, sin body:
+  - `IN_PREPARATION` → `PENDING`
+  - `READY` → `IN_PREPARATION`
+  - `DELIVERED` → `READY`
+- `PENDING` y `CANCELLED` no tienen estado anterior → `400 Bad Request`.
+- Al volver a `PENDING` se limpian `cookId` y `preparationStartDate`.
+- Al volver a `READY` se limpia `completedDate` (la orden aún no fue entregada).
+- Se emite `order_status_updated` vía WebSocket con la orden actualizada.
+- No afecta los totales de la sesión de caja (la venta ya estaba registrada).
+
 ### 3. Cancelación
 - Solo se pueden cancelar órdenes que no estén en `DELIVERED`.
 - Al cancelar:

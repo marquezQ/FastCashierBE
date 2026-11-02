@@ -1,9 +1,17 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from './entities/user.entity';
 import { CreateUserDto, UpdateUserDto } from './dto';
+
+const DEFAULT_RESET_PASSWORD = '123456';
+const RESETTABLE_ROLE_IDS = [2, 3]; // CASHIER, KITCHEN
 
 @Injectable()
 export class UsersService {
@@ -123,5 +131,20 @@ export class UsersService {
   // Actualiza solo el hash de la contraseña. No toca ningún otro campo del perfil.
   async updatePassword(id: number, newPasswordHash: string): Promise<void> {
     await this.userRepository.update(id, { passwordHash: newPasswordHash });
+  }
+
+  // Reset administrado: deja la contraseña en el valor por defecto.
+  // Solo aplica a usuarios CASHIER (2) o KITCHEN (3).
+  async resetPassword(id: number): Promise<{ message: string }> {
+    const user = await this.findOne(id);
+
+    if (!RESETTABLE_ROLE_IDS.includes(user.roleId)) {
+      throw new BadRequestException('Only CASHIER and KITCHEN users can have their password reset');
+    }
+
+    const passwordHash = await bcrypt.hash(DEFAULT_RESET_PASSWORD, 10);
+    await this.updatePassword(id, passwordHash);
+
+    return { message: 'Password reset to default successfully' };
   }
 }

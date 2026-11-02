@@ -52,10 +52,12 @@ Authorization: Bearer <access_token>
 | **Users** | `GET /users` | ✅ | ❌ | ❌ |
 | **Users** | `POST /users` | ✅ | ❌ | ❌ |
 | **Users** | `PATCH /users/:id` | ✅ | ❌ | ❌ |
+| **Users** | `PATCH /users/:id/reset-password` | ✅ | ❌ | ❌ |
 | **Orders** | `POST /orders` | ✅ | ✅ | ❌ |
 | **Orders** | `GET /orders` | ✅ | ✅ | ✅ |
 | **Orders** | `GET /orders/kitchen-display` | ✅ | ✅ | ✅ |
 | **Orders** | `PATCH /orders/:id/status` | ✅ | ✅ | ✅ |
+| **Orders** | `PATCH /orders/:id/status/revert` | ✅ | ✅ | ✅ |
 | **Orders** | `POST /orders/:id/cancel` | ✅ | ✅ | ❌ |
 | **Orders** | `DELETE /orders/:id` | ✅ | ❌ | ❌ |
 | **Orders** | `GET /orders/metrics/dashboard` | ✅ | ❌ | ❌ |
@@ -80,6 +82,9 @@ Authorization: Bearer <access_token>
 
 > [!NOTE]
 > Los endpoints de TTS (`/api/tts/*`) y Display Público (`/api/display/:token`) no están protegidos por `JwtAuthGuard` ni `RolesGuard`. Son accesibles sin autenticación. TTS minimiza latencia en la cocina; Display permite que las TVs accedan sin credenciales.
+
+> [!NOTE]
+> `PATCH /users/:id/reset-password` es exclusivo de ADMIN y solo acepta como objetivo usuarios con rol CASHIER o KITCHEN (rechaza ADMIN con `400`). Deja la contraseña en el valor por defecto `123456` (hasheado con bcrypt). No invalida los JWT ya emitidos: esos tokens siguen siendo válidos hasta expirar.
 
 ---
 

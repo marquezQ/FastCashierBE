@@ -29,7 +29,7 @@ export class Order {
   cashierId: number;
 
   @Column({ name: 'cook_id', type: 'int', nullable: true })
-  cookId: number;
+  cookId: number | null;
 
   @CreateDateColumn({ name: 'order_date' })
   orderDate: Date;
@@ -82,10 +82,10 @@ export class Order {
     type: 'timestamp',
     nullable: true,
   })
-  preparationStartDate: Date;
+  preparationStartDate: Date | null;
 
   @Column({ name: 'completed_date', type: 'timestamp', nullable: true })
-  completedDate: Date;
+  completedDate: Date | null;
 
   @Column({ type: 'varchar', length: 100, nullable: true })
   customer: string;

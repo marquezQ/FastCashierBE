@@ -9,6 +9,14 @@ import { ProductsService } from '../products/products.service';
 import { SelectQueryBuilder } from 'typeorm';
 import { OrdersGateway } from './orders.gateway';
 
+// Estado inmediatamente anterior para el retroceso manual de una orden.
+// PENDING no tiene estado anterior y CANCELLED es un estado final.
+const PREVIOUS_STATUS: { [key: string]: string } = {
+  IN_PREPARATION: 'PENDING',
+  READY: 'IN_PREPARATION',
+  DELIVERED: 'READY',
+};
+
 @Injectable()
 export class OrdersService {
   constructor(
@@ -212,6 +220,35 @@ export class OrdersService {
 
     if (updateStatusDto.observations) {
       order.observations = updateStatusDto.observations;
+    }
+
+    const updatedOrder = await this.orderRepository.save(order);
+
+    this.ordersGateway.emitOrderStatusUpdated(updatedOrder);
+
+    return updatedOrder;
+  }
+
+  async revertStatus(id: number): Promise<Order> {
+    const order = await this.findOne(id);
+
+    const previousStatus = PREVIOUS_STATUS[order.orderStatus];
+
+    if (!previousStatus) {
+      throw new BadRequestException(`Cannot revert from ${order.orderStatus}`);
+    }
+
+    order.orderStatus = previousStatus;
+
+    // Al regresar a PENDING la orden deja de estar asignada a un cocinero.
+    if (previousStatus === 'PENDING') {
+      order.cookId = null;
+      order.preparationStartDate = null;
+    }
+
+    // Al regresar a READY deja de estar completada (aún no fue entregada).
+    if (previousStatus === 'READY') {
+      order.completedDate = null;
     }
 
     const updatedOrder = await this.orderRepository.save(order);

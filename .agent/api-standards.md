@@ -107,6 +107,7 @@ app.useGlobalPipes(new ValidationPipe({
 | GET | `/:id` | Obtener usuario por ID | ADMIN |
 | POST | `/` | Crear usuario | ADMIN |
 | PATCH | `/:id` | Actualizar usuario | ADMIN |
+| PATCH | `/:id/reset-password` | Resetear contraseña a `123456` (solo CASHIER/KITCHEN, sin body) | ADMIN |
 | DELETE | `/:id` | Desactivar usuario | ADMIN |
 
 ### Categories (`/api/categories`)
@@ -147,6 +148,7 @@ app.useGlobalPipes(new ValidationPipe({
 | GET | `/:id` | Por ID | Todos |
 | PATCH | `/:id` | Actualizar orden | ADMIN, CASHIER |
 | PATCH | `/:id/status` | Cambiar estado (+ emit `order_status_updated` WS) | Todos |
+| PATCH | `/:id/status/revert` | Retroceder un estado (+ emit `order_status_updated` WS, sin body) | Todos |
 | POST | `/:id/cancel` | Cancelar orden (+ emit WS, `body: {reason}`) | ADMIN, CASHIER |
 | DELETE | `/:id` | Eliminar (solo CANCELLED) | ADMIN |
 

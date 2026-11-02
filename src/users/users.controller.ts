@@ -11,6 +11,7 @@ import {
   HttpStatus,
   UseGuards,
 } from '@nestjs/common';
+import { ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { CreateUserDto, UpdateUserDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -64,6 +65,18 @@ export class UsersController {
   @Roles('ADMIN') //Solo ADMIN
   update(@Param('id', ParseIntPipe) id: number, @Body() updateUserDto: UpdateUserDto) {
     return this.usersService.update(id, updateUserDto);
+  }
+
+  @Patch(':id/reset-password')
+  @Roles('ADMIN') //Solo ADMIN
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reset a CASHIER or KITCHEN password to the default value' })
+  @ApiParam({ name: 'id', description: 'ID of the CASHIER or KITCHEN user' })
+  @ApiResponse({ status: 200, description: 'Password reset to default successfully.' })
+  @ApiResponse({ status: 400, description: 'User is not CASHIER or KITCHEN.' })
+  @ApiResponse({ status: 404, description: 'User not found.' })
+  resetPassword(@Param('id', ParseIntPipe) id: number) {
+    return this.usersService.resetPassword(id);
   }
 
   @Delete(':id')

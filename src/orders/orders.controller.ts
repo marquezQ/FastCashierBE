@@ -139,6 +139,24 @@ export class OrdersController {
     return this.ordersService.updateStatus(id, updateStatusDto);
   }
 
+  @Patch(':id/status/revert')
+  @Roles('ADMIN', 'CASHIER', 'KITCHEN')
+  @ApiOperation({ summary: 'Move an order one status backwards' })
+  @ApiParam({ name: 'id', description: 'ID of the order' })
+  @ApiResponse({
+    status: 200,
+    description:
+      'The order status has been moved backwards: IN_PREPARATION→PENDING, READY→IN_PREPARATION, DELIVERED→READY.',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'The order cannot be moved backwards (PENDING or CANCELLED).',
+  })
+  @ApiResponse({ status: 404, description: 'Order not found.' })
+  revertStatus(@Param('id', ParseIntPipe) id: number) {
+    return this.ordersService.revertStatus(id);
+  }
+
   @Post(':id/cancel')
   @Roles('ADMIN', 'CASHIER') //Solo ADMIN y CASHIER
   @HttpCode(HttpStatus.OK)
