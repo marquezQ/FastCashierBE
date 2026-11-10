@@ -21,8 +21,8 @@ export class TtsController {
   })
   @ApiResponse({
     status: 200,
-    description: 'Archivo MP3 con el audio del pedido',
-    content: { 'audio/mpeg': {} },
+    description: 'Archivo WAV con el audio del pedido',
+    content: { 'audio/wav': {} },
   })
   @ApiResponse({ status: 400, description: 'Número de pedido inválido' })
   @ApiResponse({ status: 500, description: 'Error generando el audio' })
@@ -36,7 +36,7 @@ export class TtsController {
     const buffer = await this.ttsService.getAudioPedido(n);
 
     res.set({
-      'Content-Type': 'audio/mpeg',
+      'Content-Type': 'audio/wav',
       'Content-Length': buffer.length.toString(),
       'Cache-Control': 'public, max-age=86400',
     });
